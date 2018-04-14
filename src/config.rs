@@ -9,7 +9,7 @@ use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    #[serde(default="default_filename")]
+    #[serde(default = "default_filename")]
     filename: String,
     pub groups: Vec<Group>,
 }
@@ -57,7 +57,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
         }
     }
 
-    Ok(Config{
+    Ok(Config {
         filename: default_filename(),
         groups: vec![],
     })
@@ -65,10 +65,9 @@ pub fn load_or_default() -> Result<Config, io::Error> {
 
 impl Config {
     pub fn save(&self) -> Result<(), io::Error> {
-        println!("FILENAME {}", self.filename);
         let f = File::create(&self.filename)?;
 
-        serde_yaml::to_writer(f, self) 
+        serde_yaml::to_writer(f, self)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e.description()))
     }
 }

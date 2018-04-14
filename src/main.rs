@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate clap;
+extern crate crossterm;
 extern crate regex;
 #[macro_use]
 extern crate serde_derive;
