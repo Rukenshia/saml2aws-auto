@@ -1,0 +1,51 @@
+name: saml2aws-auto
+version: "1.0"
+author: Jan Christophersen <jan@ruken.pw>
+about: A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
+args:
+- config:
+    short: c
+    long: config
+    value_name: FILE
+    help: Sets a custom config file
+    takes_value: true
+- verbose:
+    short: v
+    multiple: true
+    help: Sets the level of verbosity
+subcommands:
+- groups:
+    about: Manage role groups
+    subcommands:
+    - list:
+        about: Lists all configured groups
+    - delete:
+        about: Deletes a group
+        args:
+        - GROUP:
+            help: Group Name
+            index: 1
+            required: true
+            takes_value: true
+    - add:
+        about: Adds a group with one or more roles
+        args:
+        - NAME:
+            index: 1
+            takes_value: true
+            required: true
+            help: Name of the group
+        - business_unit:
+            long: business-unit
+            help: Uses the BusinessUnit of your AWS accounts as a group, e.g. ***REMOVED***-example
+            takes_value: true
+        - accounts:
+            long: accounts
+            help: AWS Account Name
+            use_delimiter: true
+            takes_value: true
+        - mfa:
+            long: mfa
+            required: true
+            takes_value: true
+            help: MFA token
