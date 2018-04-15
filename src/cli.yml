@@ -19,6 +19,10 @@ subcommands:
 - refresh:
     about: Refreshes all credentials for a group
     args:
+    - password:
+        long: password
+        help: IDP Password if not saved in saml2aws
+        takes_value: true
     - mfa:
         long: mfa
         required: true
@@ -64,6 +68,10 @@ subcommands:
             long: accounts
             help: AWS Account Name
             use_delimiter: true
+            takes_value: true
+        - password:
+            long: password
+            help: IDP Password if not saved in saml2aws
             takes_value: true
         - mfa:
             long: mfa

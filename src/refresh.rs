@@ -9,6 +9,7 @@ use saml2aws::Saml2Aws;
 pub fn command(matches: &ArgMatches) {
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa").unwrap();
+    let password = matches.value_of("password");
     let cfg = config::load_or_default().unwrap();
 
     let group = match cfg.groups.get(group_name) {
@@ -31,13 +32,13 @@ pub fn command(matches: &ArgMatches) {
         return;
     }
 
-    let s = Saml2Aws::new();
+    let s = Saml2Aws::new(mfa, password);
     let mut errors = vec![];
 
     for account in &group.accounts {
         print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
 
-        match s.login(&account.arn, &account.name, &mfa) {
+        match s.login(&account.arn, &account.name) {
             Ok(_) => {
                 print!("{}", paint("SUCCESS").with(Color::Green));
             }

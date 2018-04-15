@@ -19,9 +19,12 @@ pub fn command(matches: &ArgMatches) {
         let name = matches.value_of("NAME").unwrap();
         let mfa = matches.value_of("mfa").unwrap();
         let role = matches.value_of("role").unwrap();
+        let password = matches.value_of("password");
 
         let bu = matches.value_of("business_unit");
         let account_names = matches.values_of("accounts");
+
+        let client = Saml2Aws::new(mfa, password);
 
         if bu.is_some() && account_names.is_some() {
             println!("Cannot specify both --accounts and --business-unit");
@@ -40,7 +43,7 @@ pub fn command(matches: &ArgMatches) {
         let mut accounts: Vec<Account> = vec![];
 
         if let Some(business_unit) = bu {
-            accounts = match get_accounts_by_business_unit(business_unit, role, mfa) {
+            accounts = match get_accounts_by_business_unit(business_unit, role, &client) {
                 Ok(a) => a,
                 Err(e) => {
                     println!(
@@ -54,19 +57,22 @@ pub fn command(matches: &ArgMatches) {
             }
         }
         if let Some(account_names) = account_names {
-            accounts =
-                match get_accounts_by_names(account_names.map(|a| a.into()).collect(), role, mfa) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        println!(
-                            "\n{}\n\n\t{}\n",
-                            paint("Could not list roles for accounts by names:").bold(),
-                            paint(e.description()).with(Color::Red)
-                        );
+            accounts = match get_accounts_by_names(
+                account_names.map(|a| a.into()).collect(),
+                role,
+                &client,
+            ) {
+                Ok(a) => a,
+                Err(e) => {
+                    println!(
+                        "\n{}\n\n\t{}\n",
+                        paint("Could not list roles for accounts by names:").bold(),
+                        paint(e.description()).with(Color::Red)
+                    );
 
-                        return;
-                    }
+                    return;
                 }
+            }
         }
 
         add(name, accounts)
@@ -148,11 +154,9 @@ fn add(name: &str, accounts: Vec<Account>) {
 fn get_accounts_by_business_unit(
     name: &str,
     role_name: &str,
-    mfa: &str,
+    client: &Saml2Aws,
 ) -> Result<Vec<Account>, Saml2AwsError> {
-    let client = Saml2Aws::new();
-
-    match client.list_roles(mfa) {
+    match client.list_roles() {
         Ok(a) => Ok(a.into_iter()
             .filter(|a| a.name.starts_with(name))
             .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
@@ -164,11 +168,9 @@ fn get_accounts_by_business_unit(
 fn get_accounts_by_names(
     names: Vec<String>,
     role_name: &str,
-    mfa: &str,
+    client: &Saml2Aws,
 ) -> Result<Vec<Account>, Saml2AwsError> {
-    let client = Saml2Aws::new();
-
-    match client.list_roles(mfa) {
+    match client.list_roles() {
         Ok(a) => Ok(a.into_iter()
             .filter(|a| names.iter().find(|name| *name == &a.name).is_some())
             .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))

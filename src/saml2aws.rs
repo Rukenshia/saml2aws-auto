@@ -32,14 +32,37 @@ impl Saml2AwsError {
     }
 }
 
-pub struct Saml2Aws {}
+pub struct Saml2Aws {
+    mfa: String,
+    password: Option<String>,
+}
 
 impl Saml2Aws {
     /// Create a new instance of Saml2Aws.
     ///
     /// This struct is mainly used to call the actual 'saml2aws' command.
-    pub fn new() -> Self {
-        Saml2Aws {}
+    pub fn new(mfa: &str, password: Option<&str>) -> Self {
+        Saml2Aws {
+            mfa: mfa.into(),
+            password: password.map(|p| p.into()),
+        }
+    }
+
+    /// Creates a new saml2aws subcommand call
+    fn new_command(&self, subcommand: &str) -> Command {
+        let mut c = Command::new("saml2aws");
+
+        c.arg(subcommand)
+            .arg("--skip-prompt")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        if let Some(ref p) = self.password {
+            c.arg("--password").arg(p);
+        }
+
+        c
     }
 
     /// Checks if the saml2aws binary exists by calling it
@@ -66,19 +89,12 @@ impl Saml2Aws {
     }
 
     /// Lists all available roles
-    pub fn list_roles(&self, mfa: &str) -> Result<Vec<Account>, Saml2AwsError> {
+    pub fn list_roles(&self) -> Result<Vec<Account>, Saml2AwsError> {
         if let Err(e) = self.exists() {
             return Err(e);
         }
 
-        let mut c = match Command::new("saml2aws")
-            .arg("list-roles")
-            .arg("--skip-prompt")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
+        let mut c = match self.new_command("list-roles").spawn() {
             Ok(c) => c,
             Err(e) => {
                 return Err(Saml2AwsError::new(&format!(
@@ -92,11 +108,14 @@ impl Saml2Aws {
             let mut stdin = c.stdin.as_mut().unwrap();
             let mut writer = BufWriter::new(&mut stdin);
 
-            writer.write_all(format!("{}\n", mfa).as_bytes()).unwrap();
+            writer
+                .write_all(format!("{}\n", self.mfa).as_bytes())
+                .unwrap();
         }
 
         let output = c.wait_with_output().unwrap();
         let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr);
 
         if output.status.code().unwrap() != 0 {
             if stdout.contains("Please check your username and password is correct") {
@@ -104,8 +123,13 @@ impl Saml2Aws {
                     "Invalid credentials. Check your MFA token and saml2aws configuration",
                 ));
             }
+
+            if stderr.contains("unable to locate IDP authentication form submit URL") {
+                return Err(Saml2AwsError::new("Invalid credentials, supposedly password. Check your credentials and saml2aws configuration."));
+            }
+
             println!("stdout: {}", stdout);
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            println!("stderr: {}", stderr);
             return Err(Saml2AwsError::new("Error executing saml2aws list-roles"));
         }
 
@@ -113,14 +137,12 @@ impl Saml2Aws {
     }
 
     /// Logs in to a account
-    pub fn login(&self, arn: &str, profile: &str, mfa: &str) -> Result<(), Saml2AwsError> {
+    pub fn login(&self, arn: &str, profile: &str) -> Result<(), Saml2AwsError> {
         if let Err(e) = self.exists() {
             return Err(e);
         }
 
-        let mut c = match Command::new("saml2aws")
-            .arg("login")
-            .arg("--skip-prompt")
+        let mut c = match self.new_command("login")
             .arg("--profile")
             .arg(profile)
             .arg("--role")
@@ -143,11 +165,14 @@ impl Saml2Aws {
             let mut stdin = c.stdin.as_mut().unwrap();
             let mut writer = BufWriter::new(&mut stdin);
 
-            writer.write_all(format!("{}\n", mfa).as_bytes()).unwrap();
+            writer
+                .write_all(format!("{}\n", self.mfa).as_bytes())
+                .unwrap();
         }
 
         let output = c.wait_with_output().unwrap();
         let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr);
 
         if output.status.code().unwrap() != 0 {
             if stdout.contains("Please check your username and password is correct") {
@@ -155,6 +180,11 @@ impl Saml2Aws {
                     "Invalid credentials. Check your MFA token and saml2aws configuration",
                 ));
             }
+
+            if stderr.contains("unable to locate IDP authentication form submit URL") {
+                return Err(Saml2AwsError::new("Invalid credentials, supposedly password. Check your credentials and saml2aws configuration."));
+            }
+
             println!("stdout: {}", stdout);
             println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
             return Err(Saml2AwsError::new("Error executing saml2aws login"));
