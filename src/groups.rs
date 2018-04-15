@@ -63,8 +63,6 @@ pub fn command(matches: &ArgMatches) {
         println!("Found {} accounts", accounts.len());
 
         add(name, accounts)
-    } else {
-        println!("{}", matches.usage());
     }
 }
 
