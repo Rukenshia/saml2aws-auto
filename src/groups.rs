@@ -28,6 +28,15 @@ pub fn command(matches: &ArgMatches) {
             return;
         }
 
+        if bu.is_none() && account_names.is_none() {
+            println!(
+                "\nCould not add group {}:\n\n\t{}\n",
+                paint(name).with(Color::Yellow),
+                paint("Must specify either --business-unit or --accounts flag").with(Color::Red)
+            );
+            return;
+        }
+
         let mut accounts: Vec<Account> = vec![];
 
         if let Some(business_unit) = bu {
@@ -59,8 +68,6 @@ pub fn command(matches: &ArgMatches) {
                     }
                 }
         }
-
-        println!("Found {} accounts", accounts.len());
 
         add(name, accounts)
     }
@@ -122,8 +129,20 @@ fn add(name: &str, accounts: Vec<Account>) {
 
         cfg.groups.insert(name.into(), Group { accounts: accounts });
     }
+    println!("\n{}:", paint(name).with(Color::Yellow));
+
+    for account in &cfg.groups.get(name).unwrap().accounts {
+        println!(
+            "\t{}: {}{}{}",
+            account.name,
+            account.arn.split(&account.id).next().unwrap(),
+            paint(&account.id).with(Color::Red),
+            account.arn.split(&account.id).skip(1).next().unwrap()
+        );
+    }
 
     cfg.save().unwrap();
+    println!("\nGroup configuration updated");
 }
 
 fn get_accounts_by_business_unit(
