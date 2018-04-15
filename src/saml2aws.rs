@@ -92,14 +92,59 @@ impl Saml2Aws {
                     "Invalid credentials. Check your MFA token and saml2aws configuration",
                 ));
             }
+            println!("stdout: {}", stdout);
+            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
             return Err(Saml2AwsError::new("Error executing saml2aws list-roles"));
         }
 
-        println!("status: {}", output.status);
-        println!("stdout: {}", stdout);
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-
         Ok(self.parse_role_response(&stdout))
+    }
+
+    /// Logs in to a account
+    pub fn login(&self, arn: &str, profile: &str, mfa: &str) -> Result<(), Saml2AwsError> {
+        let mut c = match Command::new("saml2aws")
+            .arg("login")
+            .arg("--skip-prompt")
+            .arg("--profile")
+            .arg(profile)
+            .arg("--role")
+            .arg(arn)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(Saml2AwsError::new(&format!(
+                    "i/o error {}",
+                    e.description()
+                )));
+            }
+        };
+
+        {
+            let mut stdin = c.stdin.as_mut().unwrap();
+            let mut writer = BufWriter::new(&mut stdin);
+
+            writer.write_all(format!("{}\n", mfa).as_bytes()).unwrap();
+        }
+
+        let output = c.wait_with_output().unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_owned();
+
+        if output.status.code().unwrap() != 0 {
+            if stdout.contains("Please check your username and password is correct") {
+                return Err(Saml2AwsError::new(
+                    "Invalid credentials. Check your MFA token and saml2aws configuration",
+                ));
+            }
+            println!("stdout: {}", stdout);
+            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            return Err(Saml2AwsError::new("Error executing saml2aws login"));
+        }
+
+        Ok(())
     }
 
     fn parse_role_response(&self, output: &str) -> Vec<Account> {

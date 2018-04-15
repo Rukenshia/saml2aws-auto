@@ -14,6 +14,19 @@ args:
     multiple: true
     help: Sets the level of verbosity
 subcommands:
+- refresh:
+    about: Refreshes all credentials for a group
+    args:
+    - mfa:
+        long: mfa
+        required: true
+        takes_value: true
+        help: MFA Token
+    - GROUP:
+        required: true
+        index: 1
+        takes_value: true
+        help: Group Name
 - groups:
     about: Manage role groups
     subcommands:

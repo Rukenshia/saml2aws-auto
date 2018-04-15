@@ -8,6 +8,7 @@ extern crate serde_yaml;
 
 mod saml2aws;
 mod groups;
+mod refresh;
 mod config;
 
 use clap::App;
@@ -19,5 +20,7 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("groups") {
         groups::command(matches)
+    } else if let Some(matches) = matches.subcommand_matches("refresh") {
+        refresh::command(matches)
     }
 }
