@@ -30,8 +30,12 @@ subcommands:
     - add:
         about: Adds a group with one or more roles
         args:
+        - role:
+            long: role
+            required: true
+            takes_value: true
+            help: Role to assume (e.g. Administrator)
         - NAME:
-            index: 1
             takes_value: true
             required: true
             help: Name of the group

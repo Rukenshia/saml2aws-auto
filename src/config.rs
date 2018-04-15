@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::fs::File;
 use std::env;
+use std::collections::HashMap;
 
 use serde_yaml;
 
@@ -11,12 +12,11 @@ use serde_yaml;
 pub struct Config {
     #[serde(default = "default_filename")]
     filename: String,
-    pub groups: Vec<Group>,
+    pub groups: HashMap<String, Group>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
-    pub name: String,
     pub accounts: Vec<Account>,
 }
 
@@ -59,7 +59,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
 
     Ok(Config {
         filename: default_filename(),
-        groups: vec![],
+        groups: HashMap::new(),
     })
 }
 
