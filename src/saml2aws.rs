@@ -43,21 +43,33 @@ impl Saml2Aws {
     }
 
     /// Checks if the saml2aws binary exists by calling it
-    pub fn exists(&self) -> bool {
+    pub fn exists(&self) -> Result<(), Saml2AwsError> {
         match Command::new("saml2aws")
             .stdout(Stdio::null())
             .stdin(Stdio::null())
             .stderr(Stdio::null())
             .status()
         {
-            Ok(s) => s.success(),
-            Err(_) => false,
+            Ok(s) => {
+                if s.success() {
+                    return Ok(());
+                }
+
+                Err(Saml2AwsError::new(
+                    "saml2aws binary not found in PATH. Did you install saml2aws?",
+                ))
+            }
+            Err(_) => Err(Saml2AwsError::new(
+                "saml2aws binary not found in PATH. Did you install saml2aws?",
+            )),
         }
     }
 
     /// Lists all available roles
     pub fn list_roles(&self, mfa: &str) -> Result<Vec<Account>, Saml2AwsError> {
-        // Create a fake stdin where we input our MFA token
+        if let Err(e) = self.exists() {
+            return Err(e);
+        }
 
         let mut c = match Command::new("saml2aws")
             .arg("list-roles")
@@ -102,6 +114,10 @@ impl Saml2Aws {
 
     /// Logs in to a account
     pub fn login(&self, arn: &str, profile: &str, mfa: &str) -> Result<(), Saml2AwsError> {
+        if let Err(e) = self.exists() {
+            return Err(e);
+        }
+
         let mut c = match Command::new("saml2aws")
             .arg("login")
             .arg("--skip-prompt")
