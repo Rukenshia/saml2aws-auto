@@ -54,7 +54,7 @@ subcommands:
             help: Name of the group
         - business_unit:
             long: business-unit
-            help: Uses the BusinessUnit of your AWS accounts as a group, e.g. ***REMOVED***-example
+            help: Uses the BusinessUnit of your AWS accounts as a group, e.g. my-unit when having accounts my-unit-dev, my-unit-int, ...
             takes_value: true
         - accounts:
             long: accounts
