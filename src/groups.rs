@@ -42,6 +42,8 @@ pub fn command(matches: &ArgMatches) {
 
         let mut accounts: Vec<Account> = vec![];
 
+        print!("Listing allowed roles for your account...");
+
         if let Some(business_unit) = bu {
             accounts = match get_accounts_by_business_unit(business_unit, role, &client) {
                 Ok(a) => a,
@@ -74,6 +76,8 @@ pub fn command(matches: &ArgMatches) {
                 }
             }
         }
+
+        println!("\t{}", paint("SUCCESS").with(Color::Green));
 
         add(name, accounts)
     }
