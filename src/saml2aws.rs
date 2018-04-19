@@ -137,7 +137,12 @@ impl Saml2Aws {
     }
 
     /// Logs in to a account
-    pub fn login(&self, arn: &str, profile: &str) -> Result<(), Saml2AwsError> {
+    pub fn login(
+        &self,
+        arn: &str,
+        profile: &str,
+        session_duration: i32,
+    ) -> Result<(), Saml2AwsError> {
         if let Err(e) = self.exists() {
             return Err(e);
         }
@@ -147,6 +152,8 @@ impl Saml2Aws {
             .arg(profile)
             .arg("--role")
             .arg(arn)
+            .arg("--session-duration")
+            .arg(&session_duration.to_string())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

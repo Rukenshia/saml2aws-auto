@@ -38,7 +38,7 @@ pub fn command(matches: &ArgMatches) {
     for account in &group.accounts {
         print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
 
-        match s.login(&account.arn, &account.name) {
+        match s.login(&account.arn, &account.name, group.session_duration) {
             Ok(_) => {
                 print!("{}", paint("SUCCESS").with(Color::Green));
             }
