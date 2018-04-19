@@ -64,6 +64,10 @@ subcommands:
             long: business-unit
             help: Uses the BusinessUnit of your AWS accounts as a group, e.g. my-unit when having accounts my-unit-dev, my-unit-int, ...
             takes_value: true
+        - session_duration:
+            long: session-duration
+            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role
+            takes_value: true
         - accounts:
             long: accounts
             help: AWS Account Name

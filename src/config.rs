@@ -17,6 +17,7 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
+    pub session_duration: i32,
     pub accounts: Vec<Account>,
 }
 

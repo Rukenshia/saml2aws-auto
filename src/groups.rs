@@ -21,6 +21,12 @@ pub fn command(matches: &ArgMatches) {
         let role = matches.value_of("role").unwrap();
         let password = matches.value_of("password");
 
+        let session_duration = matches.value_of("session_duration").unwrap_or("3600");
+        let session_duration = match session_duration.parse() {
+            Ok(n) => n,
+            Err(_) => 3600,
+        };
+
         let bu = matches.value_of("business_unit");
         let account_names = matches.values_of("accounts");
 
@@ -79,7 +85,7 @@ pub fn command(matches: &ArgMatches) {
 
         println!("\t{}", paint("SUCCESS").with(Color::Green));
 
-        add(name, accounts)
+        add(name, session_duration, accounts)
     }
 }
 
@@ -88,7 +94,13 @@ fn list() {
 
     for (name, group) in &cfg.groups {
         println!("\n{}:", paint(name).with(Color::Yellow));
+        println!(
+            "\t{}: {}",
+            paint("Session Duration").bold(),
+            paint(&format!("{} seconds", group.session_duration)).with(Color::Blue)
+        );
 
+        println!("\n\t{}", paint("Accounts").bold());
         for account in &group.accounts {
             println!(
                 "\t{}: {}{}{}",
@@ -122,7 +134,7 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, accounts: Vec<Account>) {
+fn add(name: &str, session_duration: i32, accounts: Vec<Account>) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -131,13 +143,20 @@ fn add(name: &str, accounts: Vec<Account>) {
         println!("Group {} exists, replacing accounts", name);
 
         group.accounts = accounts.clone();
+        group.session_duration = session_duration;
         exists = true;
     };
 
     if !exists {
         println!("Adding group {}", name);
 
-        cfg.groups.insert(name.into(), Group { accounts: accounts });
+        cfg.groups.insert(
+            name.into(),
+            Group {
+                accounts: accounts,
+                session_duration: session_duration,
+            },
+        );
     }
     println!("\n{}:", paint(name).with(Color::Yellow));
 
