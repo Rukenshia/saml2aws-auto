@@ -25,7 +25,6 @@ subcommands:
         takes_value: true
     - mfa:
         long: mfa
-        required: true
         takes_value: true
         help: MFA Token
     - GROUP:

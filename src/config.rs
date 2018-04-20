@@ -74,3 +74,13 @@ impl Config {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e.description()))
     }
 }
+
+impl Account {
+    pub fn session_valid(&self) -> bool {
+        if self.valid_until.is_none() {
+            return false;
+        }
+
+        Local::now() < self.valid_until.unwrap().with_timezone::<Local>(&Local)
+    }
+}
