@@ -8,6 +8,8 @@ use clap::ArgMatches;
 
 use crossterm::crossterm_style::{paint, Color};
 
+use chrono::prelude::*;
+
 pub fn command(matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {
         list()
@@ -100,11 +102,35 @@ fn list() {
             paint(&format!("{} seconds", group.session_duration)).with(Color::Blue)
         );
 
-        println!("\n\t{}", paint("Accounts").bold());
+        println!("\n\t{}", paint("Sessions").bold());
+        for account in &group.accounts {
+            match account.valid_until {
+                Some(expiration) => {
+                    let now = Local::now();
+
+                    let expiration = now.signed_duration_since(expiration);
+                    println!(
+                        "\t{}: {}",
+                        paint(&account.name).bold(),
+                        paint(&format!("{} minutes left", expiration.num_minutes()))
+                            .with(Color::Green)
+                    );
+                }
+                None => {
+                    println!(
+                        "\t{}: {}",
+                        paint(&account.name).bold(),
+                        paint("no valid session").with(Color::Red)
+                    );
+                }
+            };
+        }
+
+        println!("\n\t{}", paint("ARNs").bold());
         for account in &group.accounts {
             println!(
                 "\t{}: {}{}{}",
-                account.name,
+                paint(&account.name).bold(),
                 account.arn.split(&account.id).next().unwrap(),
                 paint(&account.id).with(Color::Red),
                 account.arn.split(&account.id).skip(1).next().unwrap()

@@ -7,6 +7,7 @@ use std::env;
 use std::collections::HashMap;
 
 use serde_yaml;
+use chrono::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -26,6 +27,7 @@ pub struct Account {
     pub id: String,
     pub name: String,
     pub arn: String,
+    pub valid_until: Option<DateTime<FixedOffset>>,
 }
 
 fn default_filename() -> String {

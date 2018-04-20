@@ -10,9 +10,9 @@ pub fn command(matches: &ArgMatches) {
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa").unwrap();
     let password = matches.value_of("password");
-    let cfg = config::load_or_default().unwrap();
+    let mut cfg = config::load_or_default().unwrap();
 
-    let group = match cfg.groups.get(group_name) {
+    let group = match cfg.groups.get_mut(group_name) {
         Some(g) => g,
         None => {
             println!(
@@ -35,11 +35,12 @@ pub fn command(matches: &ArgMatches) {
     let s = Saml2Aws::new(mfa, password);
     let mut errors = vec![];
 
-    for account in &group.accounts {
+    for mut account in &mut group.accounts {
         print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
 
         match s.login(&account.arn, &account.name, group.session_duration) {
-            Ok(_) => {
+            Ok(expiration) => {
+                account.valid_until = Some(expiration);
                 print!("{}", paint("SUCCESS").with(Color::Green));
             }
             Err(e) => {

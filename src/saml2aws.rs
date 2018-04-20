@@ -2,8 +2,9 @@ use std::fmt;
 use std::error::Error;
 use std::io::{BufWriter, Write};
 use std::process::{Command, Stdio};
-
 use regex::Regex;
+
+use chrono::prelude::*;
 
 use config::Account;
 
@@ -142,7 +143,7 @@ impl Saml2Aws {
         arn: &str,
         profile: &str,
         session_duration: i32,
-    ) -> Result<(), Saml2AwsError> {
+    ) -> Result<DateTime<FixedOffset>, Saml2AwsError> {
         if let Err(e) = self.exists() {
             return Err(e);
         }
@@ -197,7 +198,27 @@ impl Saml2Aws {
             return Err(Saml2AwsError::new("Error executing saml2aws login"));
         }
 
-        Ok(())
+        // parse stdout, check expiry time
+        let re_expiration = Regex::new(r"(?m)^Note that it will expire at (.*?\+[0-9]+)").unwrap();
+
+        let expiration = re_expiration.captures(&stdout);
+        if expiration.is_none() {
+            return Err(Saml2AwsError::new(
+                "Could not find token expiration time, you might have credentials though.",
+            ));
+        }
+
+        let expiration = &expiration.unwrap()[1];
+        match DateTime::parse_from_str(expiration, "%Y-%m-%d %H:%M:%S %z") {
+            Ok(e) => Ok(e),
+            Err(e) => {
+                println!("{}", e);
+
+                Err(Saml2AwsError::new(
+                    "Could not parse token expiration time, you might have credentials though.",
+                ))
+            }
+        }
     }
 
     fn parse_role_response(&self, output: &str) -> Vec<Account> {
@@ -210,6 +231,7 @@ impl Saml2Aws {
                 id: cap[2].into(),
                 name: cap[1].into(),
                 arn: cap[3].into(),
+                valid_until: None,
             });
         }
 
