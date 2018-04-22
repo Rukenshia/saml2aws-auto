@@ -58,7 +58,7 @@ pub fn command(matches: &ArgMatches) {
                 Err(e) => {
                     println!(
                         "\n{}\n\n\t{}\n",
-                        paint("Could not list roles for business unit:").bold(),
+                        paint("Could not list roles for business unit:"),
                         paint(e.description()).with(Color::Red)
                     );
 
@@ -76,7 +76,7 @@ pub fn command(matches: &ArgMatches) {
                 Err(e) => {
                     println!(
                         "\n{}\n\n\t{}\n",
-                        paint("Could not list roles for accounts by names:").bold(),
+                        paint("Could not list roles for accounts by names:"),
                         paint(e.description()).with(Color::Red)
                     );
 
@@ -98,11 +98,11 @@ fn list() {
         println!("\n{}:", paint(name).with(Color::Yellow));
         println!(
             "\t{}: {}",
-            paint("Session Duration").bold(),
+            paint("Session Duration"),
             paint(&format!("{} seconds", group.session_duration)).with(Color::Blue)
         );
 
-        println!("\n\t{}", paint("Sessions").bold());
+        println!("\n\t{}", paint("Sessions"));
         for account in &group.accounts {
             match account.valid_until {
                 Some(expiration) => {
@@ -111,7 +111,7 @@ fn list() {
                     let expiration = now.signed_duration_since(expiration);
                     println!(
                         "\t{}: {}",
-                        paint(&account.name).bold(),
+                        paint(&account.name),
                         paint(&format!("{} minutes left", expiration.num_minutes()))
                             .with(Color::Green)
                     );
@@ -119,18 +119,18 @@ fn list() {
                 None => {
                     println!(
                         "\t{}: {}",
-                        paint(&account.name).bold(),
+                        paint(&account.name),
                         paint("no valid session").with(Color::Red)
                     );
                 }
             };
         }
 
-        println!("\n\t{}", paint("ARNs").bold());
+        println!("\n\t{}", paint("ARNs"));
         for account in &group.accounts {
             println!(
                 "\t{}: {}{}{}",
-                paint(&account.name).bold(),
+                paint(&account.name),
                 account.arn.split(&account.id).next().unwrap(),
                 paint(&account.id).with(Color::Red),
                 account.arn.split(&account.id).skip(1).next().unwrap()

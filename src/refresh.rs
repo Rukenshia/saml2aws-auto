@@ -44,7 +44,7 @@ pub fn command(matches: &ArgMatches) {
                 None => {
                     let mut buf = String::new();
 
-                    print!("{} MFA Token: ", paint("?").with(Color::Green).bold());
+                    print!("{} MFA Token: ", paint("?").with(Color::Green));
 
                     if let Err(_) = io::stdin().read_line(&mut buf) {
                         println!(
@@ -105,7 +105,7 @@ pub fn command(matches: &ArgMatches) {
         println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", paint(group_name).with(Color::Yellow));
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
-            paint(&group.accounts[0].name).with(Color::Yellow).bold()
+            paint(&group.accounts[0].name).with(Color::Yellow)
         );
     }
 
