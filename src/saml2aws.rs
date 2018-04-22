@@ -251,7 +251,7 @@ mod test {
 Account: example-account-dev (123456890)
 arn:aws:iam::1234567890:role/Administrator";
 
-        let s = Saml2Aws::new();
+        let s = Saml2Aws::new("000000", None);
         let res = s.parse_role_response(output);
 
         assert_eq!(res.len(), 1);
