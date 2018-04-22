@@ -1,0 +1,5 @@
+pipeline:
+  build:
+    image: rust:1.25
+    commands:
+    - cargo build --release
