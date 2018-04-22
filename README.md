@@ -19,7 +19,7 @@ Download the release for your platform and make sure `saml2aws-auto` is in your 
 ## Usage
 
 ```plain
-saml2aws-auto 0.1.1
+saml2aws-auto 0.1.2
 Jan Christophersen <jan@ruken.pw>
 A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
 
