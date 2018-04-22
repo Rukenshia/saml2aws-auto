@@ -1,6 +1,6 @@
 [package]
 name = "saml2aws-auto"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Jan Christopehrsen <jan.christophersen@digitalunit.berlin>"]
 
 [dependencies]

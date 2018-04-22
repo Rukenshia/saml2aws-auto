@@ -19,7 +19,9 @@ main() {
 
     cross rustc --bin saml2aws-auto --target $TARGET --release -- -C lto
 
-    cp target/$TARGET/release/saml2aws-auto $stage/
+    fname=target/$TARGET/release/saml2aws-auto
+    test -f target/$TARGET/release/saml2aws-auto || fname=target/$TARGET/release/saml2aws-auto.exe
+    cp $fname $stage/
 
     cd $stage
     tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *
