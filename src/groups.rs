@@ -108,7 +108,7 @@ fn list() {
                 Some(expiration) => {
                     let now = Local::now();
 
-                    let expiration = now.signed_duration_since(expiration);
+                    let expiration = expiration.signed_duration_since(now);
                     println!(
                         "\t{}: {}",
                         paint(&account.name),

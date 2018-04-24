@@ -44,7 +44,7 @@ pub fn command(matches: &ArgMatches) {
                 None => {
                     let mut buf = String::new();
 
-                    print!("{} MFA Token: ", paint("?").with(Color::Green));
+                    print!("{} {}", paint("?").with(Color::Green), paint("MFA Token: "));
 
                     if let Err(_) = io::stdin().read_line(&mut buf) {
                         println!(
