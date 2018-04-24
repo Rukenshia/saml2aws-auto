@@ -109,12 +109,20 @@ fn list() {
                     let now = Local::now();
 
                     let expiration = expiration.signed_duration_since(now);
-                    println!(
-                        "\t{}: {}",
-                        paint(&account.name),
-                        paint(&format!("{} minutes left", expiration.num_minutes()))
-                            .with(Color::Green)
-                    );
+                    if expiration.num_minutes() < 0 {
+                        println!(
+                            "\t{}: {}",
+                            paint(&account.name),
+                            paint("no valid session").with(Color::Red)
+                        );
+                    } else {
+                        println!(
+                            "\t{}: {}",
+                            paint(&account.name),
+                            paint(&format!("{} minutes left", expiration.num_minutes()))
+                                .with(Color::Green)
+                        );
+                    }
                 }
                 None => {
                     println!(
