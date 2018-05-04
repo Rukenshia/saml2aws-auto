@@ -1,6 +1,9 @@
 use std::fmt;
+use std::env;
 use std::error::Error;
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Read, Write};
+use std::fs::File;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use regex::Regex;
 
@@ -89,9 +92,40 @@ impl Saml2Aws {
         }
     }
 
+    /// Checks that saml2aws is configured
+    pub fn is_configured(&self) -> Result<(), Saml2AwsError> {
+        if let Err(e) = self.exists() {
+            return Err(e);
+        }
+
+        // load the configuartion file, $HOME/.saml2aws
+        let mut f = match File::open(
+            PathBuf::new()
+                .join(env::home_dir().unwrap())
+                .join(".saml2aws"),
+        ) {
+            Ok(f) => f,
+            Err(_) => {
+                return Err(Saml2AwsError::new(
+                    "saml2aws does not seem to be configured. Did you run saml2aws configure?",
+                ));
+            }
+        };
+
+        // naive check, should use rust-ini to parse the file
+        let mut buf = String::new();
+        f.read_to_string(&mut buf).unwrap();
+
+        if buf.contains("KeyCloak") {
+            return Ok(());
+        }
+
+        Err(Saml2AwsError::new("saml2aws does not seem to be configured (only KeyCloak is supported at the moment). Did you run saml2aws configure?"))
+    }
+
     /// Lists all available roles
     pub fn list_roles(&self) -> Result<Vec<Account>, Saml2AwsError> {
-        if let Err(e) = self.exists() {
+        if let Err(e) = self.is_configured() {
             return Err(e);
         }
 
@@ -144,7 +178,7 @@ impl Saml2Aws {
         profile: &str,
         session_duration: i32,
     ) -> Result<DateTime<FixedOffset>, Saml2AwsError> {
-        if let Err(e) = self.exists() {
+        if let Err(e) = self.is_configured() {
             return Err(e);
         }
 
