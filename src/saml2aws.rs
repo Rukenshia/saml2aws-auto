@@ -39,6 +39,8 @@ impl Saml2AwsError {
 pub struct Saml2Aws {
     mfa: String,
     password: Option<String>,
+
+    pub debug: bool,
 }
 
 impl Saml2Aws {
@@ -49,6 +51,7 @@ impl Saml2Aws {
         Saml2Aws {
             mfa: mfa.into(),
             password: password.map(|p| p.into()),
+            debug: false,
         }
     }
 
@@ -153,6 +156,11 @@ impl Saml2Aws {
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         if output.status.code().unwrap() != 0 {
+            if self.debug {
+                println!("\nstdout: {}\n", stdout);
+                println!("\nstderr: {}\n", stderr);
+            }
+
             if stdout.contains("Please check your username and password is correct") {
                 return Err(Saml2AwsError::new(
                     "Invalid credentials. Check your MFA token and saml2aws configuration",
@@ -162,9 +170,6 @@ impl Saml2Aws {
             if stderr.contains("unable to locate IDP authentication form submit URL") {
                 return Err(Saml2AwsError::new("Invalid credentials, supposedly password. Check your credentials and saml2aws configuration."));
             }
-
-            println!("stdout: {}", stdout);
-            println!("stderr: {}", stderr);
             return Err(Saml2AwsError::new("Error executing saml2aws list-roles"));
         }
 
@@ -217,6 +222,11 @@ impl Saml2Aws {
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         if output.status.code().unwrap() != 0 {
+            if self.debug {
+                println!("\n\nstdout: {}\n", stdout);
+                println!("\nstderr: {}\n\n", stderr);
+            }
+
             if stdout.contains("Please check your username and password is correct") {
                 return Err(Saml2AwsError::new(
                     "Invalid credentials. Check your MFA token and saml2aws configuration",
@@ -227,8 +237,6 @@ impl Saml2Aws {
                 return Err(Saml2AwsError::new("Invalid credentials, supposedly password. Check your credentials and saml2aws configuration."));
             }
 
-            println!("stdout: {}", stdout);
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
             return Err(Saml2AwsError::new("Error executing saml2aws login"));
         }
 
