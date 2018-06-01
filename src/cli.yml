@@ -19,9 +19,13 @@ subcommands:
 - refresh:
     about: Refreshes all credentials for a group
     args:
+    - username:
+        long: username
+        help: IDP Username
+        takes_value: true
     - password:
         long: password
-        help: IDP Password if not saved in saml2aws
+        help: IDP Password
         takes_value: true
     - mfa:
         long: mfa
@@ -74,7 +78,7 @@ subcommands:
             takes_value: true
         - password:
             long: password
-            help: IDP Password if not saved in saml2aws
+            help: IDP Password
             takes_value: true
         - mfa:
             long: mfa

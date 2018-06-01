@@ -1,11 +1,11 @@
-use std::fmt;
+use regex::Regex;
 use std::env;
 use std::error::Error;
-use std::io::{BufWriter, Read, Write};
+use std::fmt;
 use std::fs::File;
+use std::io::{BufWriter, Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use regex::Regex;
 
 use chrono::prelude::*;
 
@@ -181,13 +181,14 @@ impl Saml2Aws {
         &self,
         arn: &str,
         profile: &str,
-        session_duration: i32,
+        session_duration: i64,
     ) -> Result<DateTime<FixedOffset>, Saml2AwsError> {
         if let Err(e) = self.is_configured() {
             return Err(e);
         }
 
-        let mut c = match self.new_command("login")
+        let mut c = match self
+            .new_command("login")
             .arg("--profile")
             .arg(profile)
             .arg("--role")

@@ -168,7 +168,7 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, session_duration: i32, accounts: Vec<Account>) {
+fn add(name: &str, session_duration: i64, accounts: Vec<Account>) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -214,7 +214,8 @@ fn get_accounts_by_business_unit(
     client: &Saml2Aws,
 ) -> Result<Vec<Account>, Saml2AwsError> {
     match client.list_roles() {
-        Ok(a) => Ok(a.into_iter()
+        Ok(a) => Ok(a
+            .into_iter()
             .filter(|a| a.name.starts_with(name))
             .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
             .collect()),
@@ -228,7 +229,8 @@ fn get_accounts_by_names(
     client: &Saml2Aws,
 ) -> Result<Vec<Account>, Saml2AwsError> {
     match client.list_roles() {
-        Ok(a) => Ok(a.into_iter()
+        Ok(a) => Ok(a
+            .into_iter()
             .filter(|a| names.iter().find(|name| *name == &a.name).is_some())
             .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
             .collect()),

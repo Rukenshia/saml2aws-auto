@@ -6,13 +6,18 @@ use crossterm::crossterm_style::{paint, Color};
 
 use chrono::prelude::*;
 
+use aws::assume_role::assume_role;
+use cookie::CookieJar;
+use keycloak::login::get_assertion_response;
+use saml::parse_assertion;
+
 use config;
-use saml2aws::Saml2Aws;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches, verbosity: u64) {
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa");
+    let username = matches.value_of("username");
     let password = matches.value_of("password");
 
     let mut cfg = config::load_or_default().unwrap();
@@ -24,7 +29,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             Some(g) => g,
             None => {
                 if verbosity > 0 {
-                    println!("{} match cfg.groups.get_mut(group_name) => None", debug_prefix);
+                    println!(
+                        "{} match cfg.groups.get_mut(group_name) => None",
+                        debug_prefix
+                    );
                 }
 
                 println!(
@@ -73,9 +81,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             },
         };
 
-        let mut s = Saml2Aws::new(&mfa, password);
-        s.debug = verbosity > 0;
         let mut errors = vec![];
+
+        let mut cookie_jar = CookieJar::new();
 
         for mut account in &mut group.accounts {
             if account.session_valid() {
@@ -97,21 +105,59 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
             print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
 
-            match s.login(&account.arn, &account.name, group.session_duration) {
-                Ok(expiration) => {
-                    account.valid_until = Some(expiration);
-                    print!("{}", paint("SUCCESS").with(Color::Green));
-                }
+            let (saml_response, aws_web_response) = match get_assertion_response(
+                &mut cookie_jar,
+                &cfg.idp_url,
+                username.unwrap(),
+                password.unwrap(),
+                &mfa.trim(),
+            ) {
+                Ok(r) => r,
                 Err(e) => {
+                    println!("{}", paint("FAIL").with(Color::Red));
+
                     errors.push(e);
-                    print!("{}", paint("FAIL").with(Color::Red));
+                    continue;
+                }
+            };
+
+            if verbosity > 0 {
+                println!("{} got saml response, finding principal next", debug_prefix);
+            }
+
+            let assertion = parse_assertion(&saml_response).unwrap();
+
+            let principal = assertion
+                .roles
+                .into_iter()
+                .find(|r| r.arn == account.arn)
+                .map(|r| r.principal_arn)
+                .unwrap();
+
+            match assume_role(
+                &account.arn,
+                &principal,
+                &saml_response,
+                group.session_duration,
+            ) {
+                Ok(res) => {
+                    println!("{}", paint("SUCCESS").with(Color::Green));
 
                     if verbosity > 0 {
-                        println!("\n{} s.login failed", debug_prefix);
+                        println!(
+                            "{} assumed role. AccessKeyID: {}",
+                            debug_prefix,
+                            res.credentials.unwrap().access_key_id
+                        );
                     }
                 }
-            }
-            print!("\n");
+                Err(e) => {
+                    println!("{}", paint("FAIL").with(Color::Red));
+
+                    errors.push(io::Error::new(io::ErrorKind::Other, e.description()));
+                    continue;
+                }
+            };
         }
 
         if errors.len() > 0 {

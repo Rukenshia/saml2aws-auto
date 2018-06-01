@@ -1,24 +1,25 @@
-use std::io;
+use std::collections::HashMap;
+use std::env;
 use std::error::Error;
+use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::path::Path;
-use std::fs::File;
-use std::env;
-use std::collections::HashMap;
 
-use serde_yaml;
 use chrono::prelude::*;
+use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default = "default_filename")]
     filename: String,
+    pub idp_url: String,
     pub groups: HashMap<String, Group>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
-    pub session_duration: i32,
+    pub session_duration: i64,
     pub accounts: Vec<Account>,
 }
 

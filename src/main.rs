@@ -5,12 +5,26 @@ extern crate crossterm;
 extern crate regex;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_xml_rs;
 extern crate serde_yaml;
 
-mod saml2aws;
-mod groups;
-mod refresh;
+extern crate base64;
+extern crate cookie;
+extern crate reqwest;
+extern crate rusoto_core;
+extern crate rusoto_sts;
+extern crate scraper;
+
+use std::fs::File;
+use std::io::{self, Read};
+
+mod aws;
 mod config;
+mod groups;
+mod keycloak;
+mod refresh;
+mod saml;
+mod saml2aws;
 
 use clap::App;
 
