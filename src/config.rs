@@ -63,6 +63,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
 
     Ok(Config {
         filename: default_filename(),
+        idp_url: "localhost".into(),
         groups: HashMap::new(),
     })
 }

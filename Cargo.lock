@@ -912,6 +912,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-ini"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "rustc_version"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -937,6 +942,7 @@ dependencies = [
  "reqwest 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_core 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_sts 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust-ini 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "scraper 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.64 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-xml-rs 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1715,6 +1721,7 @@ dependencies = [
 "checksum rusoto_core 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)" = "12daaa6d62d64f6447bf0299ce775f4e05f8e75e5418e817da094b9de04ad22d"
 "checksum rusoto_credential 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "53199d09fd1b7d4f5ac50f4d23106577624238ea77cae2b44eb1d1fc4cd956a4"
 "checksum rusoto_sts 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6811e835d34cff3e15bafd4239e849f5063954fc24b120dc8e09dcc4ae60ed47"
+"checksum rust-ini 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d017107127e969e7812825917f4c1a518288f784462d831b1eb214e425677c5d"
 "checksum rustc_version 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a54aa04a10c68c1c4eacb4337fd883b435997ede17a9385784b990777686b09a"
 "checksum safemem 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e27a8b19b835f7aea908818e871f5cc3a5a186550c30773be987e155e8163d8f"
 "checksum schannel 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "85fd9df495640643ad2d00443b3d78aae69802ad488debab4f1dd52fc1806ade"

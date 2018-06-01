@@ -10,13 +10,11 @@ extern crate serde_yaml;
 
 extern crate base64;
 extern crate cookie;
+extern crate ini;
 extern crate reqwest;
 extern crate rusoto_core;
 extern crate rusoto_sts;
 extern crate scraper;
-
-use std::fs::File;
-use std::io::{self, Read};
 
 mod aws;
 mod config;

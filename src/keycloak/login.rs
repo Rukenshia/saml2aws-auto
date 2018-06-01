@@ -13,7 +13,8 @@ pub fn get_assertion_response(
     username: &str,
     password: &str,
     token: &str,
-) -> Result<(String, String), io::Error> {
+    do_aws_page_request: bool,
+) -> Result<(String, Option<String>), io::Error> {
     let client = reqwest::Client::new();
     let mut doc = get_login_page(&client, cookie_jar, url)?;
     let form = get_login_form(&doc);
@@ -23,7 +24,16 @@ pub fn get_assertion_response(
     }
 
     let (saml_response, aws_form) = get_intermediate_response(&doc)?;
-    let aws_web = submit_saml_response_form(&client, cookie_jar, &aws_form.action, &saml_response)?;
+
+    let aws_web = match do_aws_page_request {
+        true => Some(submit_saml_response_form(
+            &client,
+            cookie_jar,
+            &aws_form.action,
+            &saml_response,
+        )?),
+        false => None,
+    };
 
     Ok((saml_response, aws_web))
 }

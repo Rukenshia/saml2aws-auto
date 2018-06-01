@@ -5,8 +5,10 @@ use clap::ArgMatches;
 use crossterm::crossterm_style::{paint, Color};
 
 use chrono::prelude::*;
+use std::str::FromStr;
 
 use aws::assume_role::assume_role;
+use aws::credentials::load_credentials_file;
 use cookie::CookieJar;
 use keycloak::login::get_assertion_response;
 use saml::parse_assertion;
@@ -69,7 +71,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
                     if let Err(_) = io::stdin().read_line(&mut buf) {
                         println!(
-                            "\nCould not refresh credentaisl for {}:\n\n\t{}\n",
+                            "\nCould not refresh credentials for {}:\n\n\t{}\n",
                             paint(group_name).with(Color::Yellow),
                             paint("No MFA Token provided").with(Color::Red)
                         );
@@ -84,6 +86,11 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         let mut errors = vec![];
 
         let mut cookie_jar = CookieJar::new();
+
+        // Do the first account refresh full-blown with all requests
+        // Afterwards, we will only keep copying the Cookie jar
+        // and prevent another request being done to find out AWS Role mappings
+        let mut first = true;
 
         for mut account in &mut group.accounts {
             if account.session_valid() {
@@ -111,6 +118,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 username.unwrap(),
                 password.unwrap(),
                 &mfa.trim(),
+                first,
             ) {
                 Ok(r) => r,
                 Err(e) => {
@@ -122,7 +130,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             };
 
             if verbosity > 0 {
-                println!("{} got saml response, finding principal next", debug_prefix);
+                println!(
+                    "\n{} got saml response, finding principal next",
+                    debug_prefix
+                );
             }
 
             let assertion = parse_assertion(&saml_response).unwrap();
@@ -141,15 +152,34 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 group.session_duration,
             ) {
                 Ok(res) => {
+                    first = false;
                     println!("{}", paint("SUCCESS").with(Color::Green));
 
                     if verbosity > 0 {
                         println!(
                             "{} assumed role. AccessKeyID: {}",
                             debug_prefix,
-                            res.credentials.unwrap().access_key_id
+                            res.credentials.as_ref().unwrap().access_key_id
                         );
                     }
+
+                    let (mut credentials, filepath) = load_credentials_file().unwrap();
+                    let aws_credentials = &res.credentials.as_ref().unwrap();
+
+                    credentials
+                        .with_section(Some(account.name.as_str()))
+                        .set("aws_access_key_id", aws_credentials.access_key_id.as_str())
+                        .set(
+                            "aws_secret_access_key",
+                            aws_credentials.secret_access_key.as_str(),
+                        )
+                        .set("aws_security_token", aws_credentials.session_token.as_str())
+                        .set("expiration", aws_credentials.expiration.as_str());
+
+                    credentials.write_to_file(filepath).unwrap();
+
+                    account.valid_until =
+                        Some(DateTime::from_str(aws_credentials.expiration.as_str()).unwrap());
                 }
                 Err(e) => {
                     println!("{}", paint("FAIL").with(Color::Red));

@@ -1,13 +1,12 @@
 use std::io;
 
+use super::ini;
 use super::regex;
-extern crate rusoto_core;
-extern crate rusoto_sts;
-use super::scraper;
 
-use scraper::{node::Element, ElementRef, Html, Selector};
+use scraper::{Html, Selector};
 
 pub mod assume_role;
+pub mod credentials;
 
 #[derive(Debug)]
 pub struct AWSAccountInfo {
