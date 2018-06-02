@@ -24,11 +24,19 @@ mod refresh;
 mod saml;
 
 use clap::App;
+use std::io;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
     let app = App::from_yaml(yaml);
     let matches = app.get_matches();
+
+    if let Some(_) = matches.subcommand_matches("version") {
+        App::from_yaml(yaml)
+            .write_long_version(&mut io::stdout())
+            .unwrap();
+        return;
+    }
 
     let verbosity = matches.occurrences_of("verbose");
 

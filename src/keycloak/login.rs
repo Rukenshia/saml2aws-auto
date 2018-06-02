@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::io::{self, ErrorKind, Read};
+use std::io::{self, ErrorKind};
 
 use super::cookie::{self, CookieJar};
 use super::reqwest;

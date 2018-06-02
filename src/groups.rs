@@ -1,6 +1,3 @@
-use std::error::Error;
-use std::io;
-
 use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
 use config::{prompt, Account, Group};

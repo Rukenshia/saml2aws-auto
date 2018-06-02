@@ -69,7 +69,6 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     if verbosity > 0 {
                         println!("{} mfa flag not set, no valid session", debug_prefix);
                     }
-                    let mut buf = String::new();
 
                     prompt("MFA Token", Some("000000")).unwrap()
                 }
@@ -100,7 +99,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
             print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
 
-            let (saml_response, aws_web_response) = match get_assertion_response(
+            let (saml_response, _) = match get_assertion_response(
                 &mut cookie_jar,
                 &cfg.idp_url,
                 username,

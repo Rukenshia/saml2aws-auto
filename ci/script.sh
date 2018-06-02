@@ -14,8 +14,8 @@ main() {
     cross test --target $TARGET --release
 
     shell_session_update() { :; }
-    cross run --target $TARGET -- groups list
-    cross run --target $TARGET --release -- groups list
+    cross run --target $TARGET -- version
+    cross run --target $TARGET --release -- version
 }
 
 # we don't run the "test phase" when doing deploys

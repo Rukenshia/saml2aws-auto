@@ -5,17 +5,13 @@ about: A wrapper around saml2aws allowing you to refresh multiple AWS credential
 settings:
 - SubcommandRequiredElseHelp 
 args:
-- config:
-    short: c
-    long: config
-    value_name: FILE
-    help: Sets a custom config file
-    takes_value: true
 - verbose:
     short: v
     multiple: true
     help: Sets the level of verbosity
 subcommands:
+- version:
+    about: Displays the version
 - refresh:
     about: Refreshes all credentials for a group
     args:
