@@ -1,14 +1,12 @@
 # saml2aws-auto
 
-This is a CLI that uses [saml2aws](https://github.com/Versent/saml2aws) to manage multiple AWS account credentials
+This is a CLI used to manage multiple AWS account credentials when authenticating via SAML
 at the same time. Accounts are organised in groups, which can be refreshed using one command.
 
 ## Installation
 
 The [GitHub Releases](https://github.com/Rukenshia/saml2aws-auto/releases) page includes archives for all major platforms.
 Download the release for your platform and make sure `saml2aws-auto` is in your PATH variable.
-
-**This tool relies on `saml2aws` (it really is just dumb and executes the binary for you.) to be in your PATH. Download and install it before trying to deal with `saml2aws-auto`.**
 
 ## Features
 
@@ -19,7 +17,7 @@ Download the release for your platform and make sure `saml2aws-auto` is in your 
 ## Usage
 
 ```plain
-saml2aws-auto 0.1.5
+saml2aws-auto 1.0.0
 Jan Christophersen <jan@ruken.pw>
 A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
 

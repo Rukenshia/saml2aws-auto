@@ -1,5 +1,5 @@
 name: saml2aws-auto
-version: "0.1.5"
+version: "1.0.0"
 author: Jan Christophersen <jan@ruken.pw>
 about: A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
 settings:
