@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use chrono::prelude::*;
+use crossterm::crossterm_style::{paint, Color};
 use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,18 +15,19 @@ pub struct Config {
     #[serde(default = "default_filename")]
     filename: String,
     pub idp_url: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
     pub groups: HashMap<String, Group>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
-    pub session_duration: i64,
+    pub session_duration: Option<i64>,
     pub accounts: Vec<Account>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
-    pub id: String,
     pub name: String,
     pub arn: String,
     pub valid_until: Option<DateTime<FixedOffset>>,
@@ -38,34 +40,106 @@ fn default_filename() -> String {
     format!("{}", path.to_str().unwrap())
 }
 
-pub fn load_or_default() -> Result<Config, io::Error> {
-    let default = default_filename();
-    let paths = vec!["./saml2aws-auto.yml", &default];
-
+fn get_filename(paths: Vec<&str>) -> Option<&str> {
     for path in &paths {
         if Path::new(path).exists() {
+            return Some(path);
+        }
+    }
+
+    None
+}
+
+pub fn load_or_default() -> Result<Config, io::Error> {
+    let default = default_filename();
+    match get_filename(vec!["./saml2aws-auto.yml", &default]) {
+        Some(path) => {
             let mut f = File::open(path)?;
 
             let mut buf = String::new();
 
             f.read_to_string(&mut buf)?;
 
-            return match serde_yaml::from_str::<Config>(&buf) {
+            match serde_yaml::from_str::<Config>(&buf) {
                 Ok(mut cfg) => {
                     cfg.filename = path.to_owned().into();
 
                     Ok(cfg)
                 }
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.description())),
-            };
+            }
         }
+        None => Ok(Config {
+            filename: default_filename(),
+            idp_url: "localhost".into(),
+            username: None,
+            password: None,
+            groups: HashMap::new(),
+        }),
+    }
+}
+
+pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let mut buf = String::new();
+    if let Some(default) = default {
+        print!(
+            "{} {}",
+            paint("?").with(Color::Green),
+            paint(&format!("{} [{}]: ", question, default)),
+        );
+    } else {
+        print!(
+            "{} {}",
+            paint("?").with(Color::Green),
+            paint(&format!("{}: ", question)),
+        );
     }
 
-    Ok(Config {
+    if let Err(_) = io::stdin().read_line(&mut buf) {
+        println!("Could not read line");
+        return default.map(|d| d.into());
+    }
+
+    if default.is_none() && buf.len() == 0 {
+        return prompt(question, default);
+    }
+
+    return Some(buf.trim().into());
+}
+
+pub fn check_or_interactive_create() {
+    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
+        return;
+    }
+
+    println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
+    println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
+    println!(
+        "IDP URL, please note that you will have to pass {} of Keycloak.\n",
+        paint("the exact path to the saml client").with(Color::Yellow)
+    );
+
+    let mut cfg = Config {
         filename: default_filename(),
         idp_url: "localhost".into(),
+        username: None,
+        password: None,
         groups: HashMap::new(),
-    })
+    };
+
+    if let Some(idp_url) = prompt("IDP URL", Some(&cfg.idp_url)) {
+        cfg.idp_url = idp_url.into();
+    }
+
+    if let Some(username) = prompt("IDP Username", None) {
+        cfg.username = username.into();
+    }
+    if let Some(password) = prompt("IDP Password", None) {
+        cfg.password = password.into();
+    }
+
+    cfg.save().unwrap();
+    println!("\nAll set!\n");
 }
 
 impl Config {

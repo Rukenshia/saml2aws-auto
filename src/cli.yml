@@ -69,12 +69,16 @@ subcommands:
             takes_value: true
         - session_duration:
             long: session-duration
-            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role
+            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role. Omit to implicitly use assertion duration
             takes_value: true
         - accounts:
             long: accounts
             help: AWS Account Name
             use_delimiter: true
+            takes_value: true
+        - username:
+            long: username
+            help: IDP Username
             takes_value: true
         - password:
             long: password
@@ -82,6 +86,5 @@ subcommands:
             takes_value: true
         - mfa:
             long: mfa
-            required: true
             takes_value: true
             help: MFA token

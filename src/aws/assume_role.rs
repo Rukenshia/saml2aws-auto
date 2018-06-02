@@ -7,7 +7,7 @@ pub fn assume_role(
     arn: &str,
     principal: &str,
     saml_assertion: &str,
-    session_duration: i64,
+    session_duration: Option<i64>,
 ) -> Result<AssumeRoleWithSAMLResponse, AssumeRoleWithSAMLError> {
     let c = StsClient::simple(Region::EuCentral1);
 
@@ -16,6 +16,6 @@ pub fn assume_role(
         principal_arn: principal.into(),
         policy: None,
         saml_assertion: saml_assertion.into(),
-        duration_seconds: Some(session_duration),
+        duration_seconds: session_duration,
     }).sync()
 }

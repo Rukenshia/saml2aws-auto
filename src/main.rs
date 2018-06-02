@@ -22,7 +22,6 @@ mod groups;
 mod keycloak;
 mod refresh;
 mod saml;
-mod saml2aws;
 
 use clap::App;
 
@@ -32,6 +31,8 @@ fn main() {
     let matches = app.get_matches();
 
     let verbosity = matches.occurrences_of("verbose");
+
+    config::check_or_interactive_create();
 
     if let Some(matches) = matches.subcommand_matches("groups") {
         groups::command(matches)

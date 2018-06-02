@@ -6,6 +6,7 @@ use super::reqwest;
 use super::scraper::Html;
 
 use super::form::{extract_saml_response, FormInfo};
+use super::mfa::get_totp_form;
 
 pub fn get_assertion_response(
     cookie_jar: &mut CookieJar,
@@ -125,11 +126,9 @@ pub fn get_login_page(
         })
     }
 
-    let body = res
+    Ok(res
         .text()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
-
-    Ok(body)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?)
 }
 
 pub fn get_login_form(document: &str) -> Result<FormInfo, io::Error> {
@@ -141,22 +140,6 @@ pub fn get_login_form(document: &str) -> Result<FormInfo, io::Error> {
             return Err(io::Error::new(
                 ErrorKind::NotFound,
                 "Could not find login form",
-            ))
-        }
-    };
-
-    Ok(form)
-}
-
-pub fn get_totp_form(document: &str) -> Result<FormInfo, io::Error> {
-    let doc = Html::parse_document(document);
-
-    let form = match FormInfo::from_html(&doc, "form#kc-totp-login-form") {
-        Some(f) => f,
-        None => {
-            return Err(io::Error::new(
-                ErrorKind::NotFound,
-                "Could not find totp form",
             ))
         }
     };
@@ -227,17 +210,7 @@ pub fn submit_saml_response_form(
         })
     }
 
-    let body = res
+    Ok(res
         .text()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
-
-    // Then we add cookies in the jar given the response
-    if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
-        raw_cookies.iter().for_each(|raw_cookie| {
-            let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
-            cookie_jar.add(cookie)
-        })
-    }
-
-    Ok(body)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?)
 }

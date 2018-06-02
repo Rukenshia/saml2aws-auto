@@ -9,6 +9,7 @@ use std::str::FromStr;
 
 use aws::assume_role::assume_role;
 use aws::credentials::load_credentials_file;
+use config::prompt;
 use cookie::CookieJar;
 use keycloak::login::get_assertion_response;
 use saml::parse_assertion;
@@ -17,12 +18,15 @@ use config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches, verbosity: u64) {
+    let mut cfg = config::load_or_default().unwrap();
+
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa");
-    let username = matches.value_of("username");
-    let password = matches.value_of("password");
 
-    let mut cfg = config::load_or_default().unwrap();
+    let cfg_username = cfg.username.as_ref().unwrap();
+    let cfg_password = cfg.password.as_ref().unwrap();
+    let username = matches.value_of("username").unwrap_or(&cfg_username);
+    let password = matches.value_of("password").unwrap_or(&cfg_password);
 
     let debug_prefix = paint("DEBU").with(Color::Cyan);
 
@@ -67,18 +71,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     }
                     let mut buf = String::new();
 
-                    print!("{} {}", paint("?").with(Color::Green), paint("MFA Token: "));
-
-                    if let Err(_) = io::stdin().read_line(&mut buf) {
-                        println!(
-                            "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                            paint(group_name).with(Color::Yellow),
-                            paint("No MFA Token provided").with(Color::Red)
-                        );
-                        return;
-                    }
-
-                    buf
+                    prompt("MFA Token", Some("000000")).unwrap()
                 }
             },
         };
@@ -86,11 +79,6 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         let mut errors = vec![];
 
         let mut cookie_jar = CookieJar::new();
-
-        // Do the first account refresh full-blown with all requests
-        // Afterwards, we will only keep copying the Cookie jar
-        // and prevent another request being done to find out AWS Role mappings
-        let mut first = true;
 
         for mut account in &mut group.accounts {
             if account.session_valid() {
@@ -115,10 +103,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             let (saml_response, aws_web_response) = match get_assertion_response(
                 &mut cookie_jar,
                 &cfg.idp_url,
-                username.unwrap(),
-                password.unwrap(),
+                username,
+                password,
                 &mfa.trim(),
-                first,
+                false,
             ) {
                 Ok(r) => r,
                 Err(e) => {
@@ -149,10 +137,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 &account.arn,
                 &principal,
                 &saml_response,
-                group.session_duration,
+                group.session_duration.or(Some(assertion.session_duration)),
             ) {
                 Ok(res) => {
-                    first = false;
                     println!("{}", paint("SUCCESS").with(Color::Green));
 
                     if verbosity > 0 {

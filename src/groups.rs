@@ -1,14 +1,15 @@
 use std::error::Error;
+use std::io;
 
+use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
-use config::{Account, Group};
-use saml2aws::{Saml2Aws, Saml2AwsError};
-
-use clap::ArgMatches;
-
-use crossterm::crossterm_style::{paint, Color};
+use config::{prompt, Account, Group};
+use keycloak::login::get_assertion_response;
 
 use chrono::prelude::*;
+use clap::ArgMatches;
+use cookie::CookieJar;
+use crossterm::crossterm_style::{paint, Color};
 
 pub fn command(matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {
@@ -18,21 +19,28 @@ pub fn command(matches: &ArgMatches) {
 
         delete(name)
     } else if let Some(matches) = matches.subcommand_matches("add") {
-        let name = matches.value_of("NAME").unwrap();
-        let mfa = matches.value_of("mfa").unwrap();
-        let role = matches.value_of("role").unwrap();
-        let password = matches.value_of("password");
+        let cfg = config::load_or_default().unwrap();
 
-        let session_duration = matches.value_of("session_duration").unwrap_or("3600");
-        let session_duration = match session_duration.parse() {
-            Ok(n) => n,
-            Err(_) => 3600,
-        };
+        let name = matches.value_of("NAME").unwrap();
+        let role = matches.value_of("role").unwrap();
+
+        let cfg_username = cfg.username.unwrap();
+        let cfg_password = cfg.password.unwrap();
+        let username = matches.value_of("username").unwrap_or(&cfg_username);
+        let password = matches.value_of("password").unwrap_or(&cfg_password);
+
+        let mfa = matches
+            .value_of("mfa")
+            .map(|m| m.into())
+            .or_else(|| prompt("MFA Token", Some("000000")))
+            .expect("No MFA Token provided");
+
+        let session_duration = matches
+            .value_of("session_duration")
+            .map(|s| s.parse().ok().unwrap());
 
         let bu = matches.value_of("business_unit");
         let account_names = matches.values_of("accounts");
-
-        let client = Saml2Aws::new(mfa, password);
 
         if bu.is_some() && account_names.is_some() {
             println!("Cannot specify both --accounts and --business-unit");
@@ -52,37 +60,24 @@ pub fn command(matches: &ArgMatches) {
 
         print!("Listing allowed roles for your account...");
 
-        if let Some(business_unit) = bu {
-            accounts = match get_accounts_by_business_unit(business_unit, role, &client) {
-                Ok(a) => a,
-                Err(e) => {
-                    println!(
-                        "\n{}\n\n\t{}\n",
-                        paint("Could not list roles for business unit:"),
-                        paint(e.description()).with(Color::Red)
-                    );
+        let mut cookie_jar = CookieJar::new();
+        let (_, web_response) = get_assertion_response(
+            &mut cookie_jar,
+            &cfg.idp_url,
+            username,
+            password,
+            &mfa,
+            true,
+        ).unwrap();
 
-                    return;
-                }
-            }
+        let aws_list = extract_saml_accounts(&web_response.unwrap()).unwrap();
+
+        if let Some(business_unit) = bu {
+            accounts = get_accounts_by_business_unit(&aws_list, business_unit, role);
         }
         if let Some(account_names) = account_names {
-            accounts = match get_accounts_by_names(
-                account_names.map(|a| a.into()).collect(),
-                role,
-                &client,
-            ) {
-                Ok(a) => a,
-                Err(e) => {
-                    println!(
-                        "\n{}\n\n\t{}\n",
-                        paint("Could not list roles for accounts by names:"),
-                        paint(e.description()).with(Color::Red)
-                    );
-
-                    return;
-                }
-            }
+            accounts =
+                get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
         }
 
         println!("\t{}", paint("SUCCESS").with(Color::Green));
@@ -96,11 +91,20 @@ fn list() {
 
     for (name, group) in &cfg.groups {
         println!("\n{}:", paint(name).with(Color::Yellow));
-        println!(
-            "\t{}: {}",
-            paint("Session Duration"),
-            paint(&format!("{} seconds", group.session_duration)).with(Color::Blue)
-        );
+
+        if let Some(duration) = group.session_duration {
+            println!(
+                "\t{}: {}",
+                paint("Session Duration"),
+                paint(&format!("{} seconds", duration)).with(Color::Blue)
+            );
+        } else {
+            println!(
+                "\t{}: {}",
+                paint("Session Duration"),
+                paint("implicit").with(Color::Blue)
+            );
+        }
 
         println!("\n\t{}", paint("Sessions"));
         for account in &group.accounts {
@@ -136,13 +140,7 @@ fn list() {
 
         println!("\n\t{}", paint("ARNs"));
         for account in &group.accounts {
-            println!(
-                "\t{}: {}{}{}",
-                paint(&account.name),
-                account.arn.split(&account.id).next().unwrap(),
-                paint(&account.id).with(Color::Red),
-                account.arn.split(&account.id).skip(1).next().unwrap()
-            );
+            println!("\t{}: {}", paint(&account.name), account.arn,);
         }
         println!("");
     }
@@ -168,7 +166,7 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, session_duration: i64, accounts: Vec<Account>) {
+fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -195,13 +193,7 @@ fn add(name: &str, session_duration: i64, accounts: Vec<Account>) {
     println!("\n{}:", paint(name).with(Color::Yellow));
 
     for account in &cfg.groups.get(name).unwrap().accounts {
-        println!(
-            "\t{}: {}{}{}",
-            account.name,
-            account.arn.split(&account.id).next().unwrap(),
-            paint(&account.id).with(Color::Red),
-            account.arn.split(&account.id).skip(1).next().unwrap()
-        );
+        println!("\t{}: {}", account.name, account.arn,);
     }
 
     cfg.save().unwrap();
@@ -209,31 +201,35 @@ fn add(name: &str, session_duration: i64, accounts: Vec<Account>) {
 }
 
 fn get_accounts_by_business_unit(
+    accounts: &Vec<AWSAccountInfo>,
     name: &str,
     role_name: &str,
-    client: &Saml2Aws,
-) -> Result<Vec<Account>, Saml2AwsError> {
-    match client.list_roles() {
-        Ok(a) => Ok(a
-            .into_iter()
-            .filter(|a| a.name.starts_with(name))
-            .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
-            .collect()),
-        Err(e) => Err(e),
-    }
+) -> Vec<Account> {
+    accounts
+        .into_iter()
+        .filter(|a| a.name.starts_with(name))
+        .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
+        .map(|a| Account {
+            name: a.name.clone(),
+            arn: a.arn.clone(),
+            valid_until: None,
+        })
+        .collect()
 }
 
 fn get_accounts_by_names(
+    accounts: &Vec<AWSAccountInfo>,
     names: Vec<String>,
     role_name: &str,
-    client: &Saml2Aws,
-) -> Result<Vec<Account>, Saml2AwsError> {
-    match client.list_roles() {
-        Ok(a) => Ok(a
-            .into_iter()
-            .filter(|a| names.iter().find(|name| *name == &a.name).is_some())
-            .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
-            .collect()),
-        Err(e) => Err(e),
-    }
+) -> Vec<Account> {
+    accounts
+        .into_iter()
+        .filter(|a| names.iter().find(|name| *name == &a.name).is_some())
+        .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
+        .map(|a| Account {
+            name: a.name.clone(),
+            arn: a.arn.clone(),
+            valid_until: None,
+        })
+        .collect()
 }
