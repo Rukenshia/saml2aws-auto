@@ -1,27 +1,27 @@
 name: saml2aws-auto
-version: "0.1.5"
+version: "1.0.0"
 author: Jan Christophersen <jan@ruken.pw>
 about: A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
 settings:
 - SubcommandRequiredElseHelp 
 args:
-- config:
-    short: c
-    long: config
-    value_name: FILE
-    help: Sets a custom config file
-    takes_value: true
 - verbose:
     short: v
     multiple: true
     help: Sets the level of verbosity
 subcommands:
+- version:
+    about: Displays the version
 - refresh:
     about: Refreshes all credentials for a group
     args:
+    - username:
+        long: username
+        help: IDP Username
+        takes_value: true
     - password:
         long: password
-        help: IDP Password if not saved in saml2aws
+        help: IDP Password
         takes_value: true
     - mfa:
         long: mfa
@@ -65,19 +65,22 @@ subcommands:
             takes_value: true
         - session_duration:
             long: session-duration
-            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role
+            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role. Omit to implicitly use assertion duration
             takes_value: true
         - accounts:
             long: accounts
             help: AWS Account Name
             use_delimiter: true
             takes_value: true
+        - username:
+            long: username
+            help: IDP Username
+            takes_value: true
         - password:
             long: password
-            help: IDP Password if not saved in saml2aws
+            help: IDP Password
             takes_value: true
         - mfa:
             long: mfa
-            required: true
             takes_value: true
             help: MFA token

@@ -1,7 +1,7 @@
 [package]
 name = "saml2aws-auto"
-version = "0.1.5"
-authors = ["Jan Christopehrsen <jan.christophersen@digitalunit.berlin>"]
+version = "1.0.0"
+authors = ["Jan Christopehrsen <jan@ruken.pw>"]
 
 [dependencies]
 clap = {version = "2.31", features = ["yaml"]}
@@ -9,5 +9,13 @@ regex = "0.2"
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.7"
+serde-xml-rs = "0.2.1"
 crossterm = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
+reqwest = "0.8"
+scraper = "0.6"
+cookie = "0.10"
+base64 = "~0.6.0"
+rusoto_core = "0.32.0"
+rusoto_sts = "0.32.0"
+rust-ini = "0.12"
