@@ -14,6 +14,7 @@ main() {
     cross test --target $TARGET --release
 
     shell_session_update() { :; }
+    wine --version
     cross run --target $TARGET -- version
     cross run --target $TARGET --release -- version
 }
