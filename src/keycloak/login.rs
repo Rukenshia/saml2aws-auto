@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::io::{self, ErrorKind};
 
 use super::cookie::{self, CookieJar};
 use super::reqwest;
@@ -7,6 +6,7 @@ use super::scraper::Html;
 
 use super::form::{extract_saml_response, FormInfo};
 use super::mfa::get_totp_form;
+use super::{KeycloakError, KeycloakErrorKind};
 
 pub fn get_assertion_response(
     cookie_jar: &mut CookieJar,
@@ -15,7 +15,7 @@ pub fn get_assertion_response(
     password: &str,
     token: &str,
     do_aws_page_request: bool,
-) -> Result<(String, Option<String>), io::Error> {
+) -> Result<(String, Option<String>), KeycloakError> {
     let client = reqwest::Client::new();
     let mut doc = get_login_page(&client, cookie_jar, url)?;
     let form = get_login_form(&doc);
@@ -46,7 +46,7 @@ fn do_login_flow(
     username: &str,
     password: &str,
     token: &str,
-) -> Result<String, io::Error> {
+) -> Result<String, KeycloakError> {
     // Submit User+Pass
     let params = [("username", username), ("password", password)];
     let doc = submit_form(&client, cookie_jar, login_url, &params)?;
@@ -64,7 +64,7 @@ pub fn submit_form(
     cookie_jar: &mut CookieJar,
     url: &str,
     params: &[(&str, &str)],
-) -> Result<String, io::Error> {
+) -> Result<String, KeycloakError> {
     let mut cookie = reqwest::header::Cookie::new();
     {
         cookie_jar.iter().for_each(|cookie_from_jar| {
@@ -80,7 +80,7 @@ pub fn submit_form(
         .form(&params)
         .header(cookie)
         .send()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
     if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
@@ -92,7 +92,14 @@ pub fn submit_form(
 
     let body = res
         .text()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+
+    if body.contains("Invalid username or password") {
+        return Err(KeycloakError::new(
+            KeycloakErrorKind::InvalidCredentials,
+            "Invalid username or password",
+        ));
+    }
 
     Ok(body)
 }
@@ -101,7 +108,7 @@ pub fn get_login_page(
     client: &reqwest::Client,
     cookie_jar: &mut CookieJar,
     url: &str,
-) -> Result<String, io::Error> {
+) -> Result<String, KeycloakError> {
     let mut cookie = reqwest::header::Cookie::new();
     {
         cookie_jar.iter().for_each(|cookie_from_jar| {
@@ -116,7 +123,7 @@ pub fn get_login_page(
         .get(url)
         .header(cookie)
         .send()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
     if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
@@ -128,17 +135,17 @@ pub fn get_login_page(
 
     Ok(res
         .text()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?)
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }
 
-pub fn get_login_form(document: &str) -> Result<FormInfo, io::Error> {
+pub fn get_login_form(document: &str) -> Result<FormInfo, KeycloakError> {
     let doc = Html::parse_document(document);
 
     let form = match FormInfo::from_html(&doc, "form#form-login") {
         Some(f) => f,
         None => {
-            return Err(io::Error::new(
-                ErrorKind::NotFound,
+            return Err(KeycloakError::new(
+                KeycloakErrorKind::FormNotFound,
                 "Could not find login form",
             ))
         }
@@ -147,9 +154,12 @@ pub fn get_login_form(document: &str) -> Result<FormInfo, io::Error> {
     Ok(form)
 }
 
-pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), io::Error> {
+pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), KeycloakError> {
     if document.contains("Invalid authenticator code") {
-        return Err(io::Error::new(ErrorKind::InvalidInput, "Invalid MFA Token"));
+        return Err(KeycloakError::new(
+            KeycloakErrorKind::InvalidToken,
+            "Invalid MFA token",
+        ));
     }
 
     let doc = Html::parse_document(document);
@@ -157,9 +167,9 @@ pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), i
     let form = match FormInfo::from_html(&doc, "form") {
         Some(f) => f,
         None => {
-            return Err(io::Error::new(
-                ErrorKind::Other,
-                "Could not find saml response submit form",
+            return Err(KeycloakError::new(
+                KeycloakErrorKind::FormNotFound,
+                "Could not find saml submit form",
             ))
         }
     };
@@ -167,9 +177,9 @@ pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), i
     let saml_response = match extract_saml_response(&doc) {
         Some(r) => r,
         None => {
-            return Err(io::Error::new(
-                ErrorKind::Other,
-                "Could not find saml response data",
+            return Err(KeycloakError::new(
+                KeycloakErrorKind::Io,
+                "Could not find saml response",
             ))
         }
     };
@@ -182,7 +192,7 @@ pub fn submit_saml_response_form(
     cookie_jar: &mut CookieJar,
     url: &str,
     response: &str,
-) -> Result<String, io::Error> {
+) -> Result<String, KeycloakError> {
     let params = [("SAMLResponse", response)];
 
     let mut cookie = reqwest::header::Cookie::new();
@@ -200,7 +210,7 @@ pub fn submit_saml_response_form(
         .form(&params)
         .header(cookie)
         .send()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
     if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
@@ -212,5 +222,5 @@ pub fn submit_saml_response_form(
 
     Ok(res
         .text()
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.description()))?)
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }
