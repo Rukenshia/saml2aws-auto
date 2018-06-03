@@ -14,9 +14,13 @@ main() {
     cross test --target $TARGET --release
 
     shell_session_update() { :; }
-    wine --version
-    cross run --target $TARGET -- version
-    cross run --target $TARGET --release -- version
+
+    if [ "$TARGET" != "x86_64-pc-windows-gnu" ]; then
+        cross run --target $TARGET -- version
+        cross run --target $TARGET --release -- version
+    else
+        echo "WARN: smoke test disabled for windows due to wine incompatibility"
+    fi
 }
 
 # we don't run the "test phase" when doing deploys
