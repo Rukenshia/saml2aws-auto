@@ -20,6 +20,7 @@ pub fn command(matches: &ArgMatches) {
 
         let name = matches.value_of("NAME").unwrap();
         let role = matches.value_of("role").unwrap();
+        let append = matches.is_present("append");
 
         let cfg_username = cfg.username.unwrap();
         let cfg_password = cfg.password.unwrap();
@@ -79,7 +80,7 @@ pub fn command(matches: &ArgMatches) {
 
         println!("\t{}", paint("SUCCESS").with(Color::Green));
 
-        add(name, session_duration, accounts)
+        add(name, session_duration, accounts, append)
     }
 }
 
@@ -163,15 +164,31 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>) {
+fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
 
     if let Some((name, group)) = cfg.groups.iter_mut().find(|&(a, _)| a == name) {
-        println!("Group {} exists, replacing accounts", name);
+        if append_only {
+            println!("Group {} exists, appending new accounts", name);
 
-        group.accounts = accounts.clone();
+            let existing_names: Vec<String> = (&group.accounts)
+                .into_iter()
+                .map(|ref a| a.name.clone())
+                .collect();
+
+            group.accounts.extend(
+                (&accounts)
+                    .into_iter()
+                    .filter(|a| !existing_names.contains(&a.name))
+                    .map(|a| a.clone())
+                    .collect::<Vec<Account>>(),
+            );
+        } else {
+            group.accounts = accounts.clone();
+            println!("Group {} exists, replacing accounts", name);
+        }
         group.session_duration = session_duration;
         exists = true;
     };
