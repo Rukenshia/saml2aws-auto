@@ -134,7 +134,7 @@ pub fn check_or_interactive_create() {
     if let Some(username) = prompt("IDP Username", None) {
         cfg.username = username.into();
     }
-    if let Some(password) = prompt("IDP Password", None) {
+    if let Some(password) = prompt("IDP Password", Some("")) {
         cfg.password = password.into();
     }
 
