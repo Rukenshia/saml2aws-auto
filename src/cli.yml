@@ -1,5 +1,5 @@
 name: saml2aws-auto
-version: "1.0.0"
+version: "1.1.0"
 author: Jan Christophersen <jan@ruken.pw>
 about: A wrapper around saml2aws allowing you to refresh multiple AWS credentials at the same time
 settings:
@@ -59,6 +59,9 @@ subcommands:
             takes_value: true
             required: true
             help: Name of the group
+        - append:
+            long: append
+            help: When set, existing accounts in the group will not be removed. New accounts will be appended to the list
         - business_unit:
             long: business-unit
             help: Uses the BusinessUnit of your AWS accounts as a group, e.g. my-unit when having accounts my-unit-dev, my-unit-int, ...
