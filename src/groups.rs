@@ -39,19 +39,19 @@ pub fn command(matches: &ArgMatches) {
             .value_of("session_duration")
             .map(|s| s.parse().ok().unwrap());
 
-        let bu = matches.value_of("business_unit");
+        let prefix = matches.value_of("prefix");
         let account_names = matches.values_of("accounts");
 
-        if bu.is_some() && account_names.is_some() {
-            println!("Cannot specify both --accounts and --business-unit");
+        if prefix.is_some() && account_names.is_some() {
+            println!("Cannot specify both --accounts and --prefix");
             return;
         }
 
-        if bu.is_none() && account_names.is_none() {
+        if prefix.is_none() && account_names.is_none() {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
                 paint(name).with(Color::Yellow),
-                paint("Must specify either --business-unit or --accounts flag").with(Color::Red)
+                paint("Must specify either --prefix or --accounts flag").with(Color::Red)
             );
             return;
         }
@@ -92,8 +92,8 @@ pub fn command(matches: &ArgMatches) {
             }
         };
 
-        if let Some(business_unit) = bu {
-            accounts = get_accounts_by_business_unit(&aws_list, business_unit, role);
+        if let Some(prefix) = prefix {
+            accounts = get_acocunts_prefixed_by(&aws_list, prefix, role);
         }
         if let Some(account_names) = account_names {
             accounts =
@@ -236,14 +236,14 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
     println!("\nGroup configuration updated");
 }
 
-fn get_accounts_by_business_unit(
+fn get_acocunts_prefixed_by(
     accounts: &Vec<AWSAccountInfo>,
-    name: &str,
+    prefix: &str,
     role_name: &str,
 ) -> Vec<Account> {
     accounts
         .into_iter()
-        .filter(|a| a.name.starts_with(name))
+        .filter(|a| a.name.starts_with(prefix))
         .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
         .map(|a| Account {
             name: a.name.clone(),

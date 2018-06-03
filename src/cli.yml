@@ -62,9 +62,9 @@ subcommands:
         - append:
             long: append
             help: When set, existing accounts in the group will not be removed. New accounts will be appended to the list
-        - business_unit:
-            long: business-unit
-            help: Uses the BusinessUnit of your AWS accounts as a group, e.g. my-unit when having accounts my-unit-dev, my-unit-int, ...
+        - prefix:
+            long: prefix
+            help: Only add accounts starting with the given string
             takes_value: true
         - session_duration:
             long: session-duration
