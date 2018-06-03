@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
 use config::{prompt, Account, Group};
@@ -56,19 +58,39 @@ pub fn command(matches: &ArgMatches) {
 
         let mut accounts: Vec<Account> = vec![];
 
-        print!("Listing allowed roles for your account...");
+        print!("Listing allowed roles for your account\t");
 
         let mut cookie_jar = CookieJar::new();
-        let (_, web_response) = get_assertion_response(
+        let (_, web_response) = match get_assertion_response(
             &mut cookie_jar,
             &cfg.idp_url,
             username,
             password,
             &mfa,
             true,
-        ).unwrap();
+        ) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("{}", paint("FAIL").with(Color::Red));
+                println!(
+                    "\nCould not add group:\n\n\t{}\n",
+                    paint(e.description()).with(Color::Red)
+                );
+                return;
+            }
+        };
 
-        let aws_list = extract_saml_accounts(&web_response.unwrap()).unwrap();
+        let aws_list = match extract_saml_accounts(&web_response.unwrap()) {
+            Ok(l) => l,
+            Err(e) => {
+                println!("{}", paint("FAIL").with(Color::Red));
+                println!(
+                    "\nCould not add group:\n\n\t{}\n",
+                    paint(e.description()).with(Color::Red)
+                );
+                return;
+            }
+        };
 
         if let Some(business_unit) = bu {
             accounts = get_accounts_by_business_unit(&aws_list, business_unit, role);

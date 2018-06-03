@@ -12,6 +12,7 @@ use aws::credentials::load_credentials_file;
 use config::prompt;
 use cookie::CookieJar;
 use keycloak::login::get_assertion_response;
+use keycloak::KeycloakErrorKind;
 use saml::parse_assertion;
 
 use config;
@@ -75,7 +76,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             },
         };
 
-        let mut errors = vec![];
+        let mut errors: Vec<Box<Error>> = vec![];
 
         let mut cookie_jar = CookieJar::new();
 
@@ -111,7 +112,18 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 Err(e) => {
                     println!("{}", paint("FAIL").with(Color::Red));
 
-                    errors.push(e);
+                    if e.kind == KeycloakErrorKind::InvalidCredentials
+                        || e.kind == KeycloakErrorKind::InvalidToken
+                    {
+                        println!(
+                            "\n{} Cannot recover from error:\n\n\t{}\n",
+                            paint("!").with(Color::Red),
+                            paint(e.description()).with(Color::Red)
+                        );
+                        return;
+                    }
+
+                    errors.push(Box::new(e));
                     continue;
                 }
             };
@@ -123,14 +135,29 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 );
             }
 
-            let assertion = parse_assertion(&saml_response).unwrap();
+            let assertion = match parse_assertion(&saml_response) {
+                Ok(a) => a,
+                Err(e) => {
+                    errors.push(Box::new(e));
+                    continue;
+                }
+            };
 
-            let principal = assertion
+            let principal = match assertion
                 .roles
                 .into_iter()
                 .find(|r| r.arn == account.arn)
                 .map(|r| r.principal_arn)
-                .unwrap();
+            {
+                Some(r) => r,
+                None => {
+                    errors.push(Box::new(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "Principal not found. Are you sure you have access to this account?",
+                    )));
+                    continue;
+                }
+            };
 
             match assume_role(
                 &account.arn,
@@ -170,7 +197,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 Err(e) => {
                     println!("{}", paint("FAIL").with(Color::Red));
 
-                    errors.push(io::Error::new(io::ErrorKind::Other, e.description()));
+                    errors.push(Box::new(e));
                     continue;
                 }
             };
