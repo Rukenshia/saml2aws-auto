@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::crossterm_style::{paint, Color};
+use crossterm::style::{paint, Color};
 
 use chrono::prelude::*;
 use std::str::FromStr;
