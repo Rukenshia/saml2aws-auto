@@ -1,6 +1,8 @@
-use rusoto_core::Region;
-use rusoto_sts::{AssumeRoleWithSAMLError, AssumeRoleWithSAMLRequest, AssumeRoleWithSAMLResponse,
-                 Sts, StsClient};
+use rusoto_core::{reactor::RequestDispatcher, Region};
+use rusoto_credential::StaticProvider;
+use rusoto_sts::{
+    AssumeRoleWithSAMLError, AssumeRoleWithSAMLRequest, AssumeRoleWithSAMLResponse, Sts, StsClient,
+};
 
 pub fn assume_role(
     arn: &str,
@@ -8,7 +10,11 @@ pub fn assume_role(
     saml_assertion: &str,
     session_duration: Option<i64>,
 ) -> Result<AssumeRoleWithSAMLResponse, AssumeRoleWithSAMLError> {
-    let c = StsClient::simple(Region::EuCentral1);
+    let c = StsClient::new(
+        RequestDispatcher::default(),
+        StaticProvider::new_minimal("UNSET".into(), "UNSET".into()),
+        Region::EuCentral1,
+    );
 
     c.assume_role_with_saml(&AssumeRoleWithSAMLRequest {
         role_arn: arn.into(),
