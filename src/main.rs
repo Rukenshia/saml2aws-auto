@@ -11,6 +11,7 @@ extern crate serde_yaml;
 extern crate base64;
 extern crate cookie;
 extern crate ini;
+extern crate keyring;
 extern crate reqwest;
 extern crate rusoto_core;
 extern crate rusoto_sts;

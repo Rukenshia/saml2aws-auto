@@ -1,7 +1,6 @@
 use rusoto_core::Region;
-use rusoto_sts::{
-    AssumeRoleWithSAMLError, AssumeRoleWithSAMLRequest, AssumeRoleWithSAMLResponse, Sts, StsClient,
-};
+use rusoto_sts::{AssumeRoleWithSAMLError, AssumeRoleWithSAMLRequest, AssumeRoleWithSAMLResponse,
+                 Sts, StsClient};
 
 pub fn assume_role(
     arn: &str,

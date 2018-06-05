@@ -9,6 +9,7 @@ use std::path::Path;
 use chrono::prelude::*;
 use crossterm::crossterm_style::{paint, Color};
 use serde_yaml;
+use keyring::{Keyring, KeyringError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -16,7 +17,10 @@ pub struct Config {
     filename: String,
     pub idp_url: String,
     pub username: Option<String>,
+
+    #[serde(skip_serializing)]
     pub password: Option<String>,
+
     pub groups: HashMap<String, Group>,
 }
 
@@ -64,6 +68,13 @@ pub fn load_or_default() -> Result<Config, io::Error> {
                 Ok(mut cfg) => {
                     cfg.filename = path.to_owned().into();
 
+                    if let Some(ref username) = cfg.username {
+                        cfg.password = match get_password(username) {
+                            Ok(p) => Some(p),
+                            Err(_) => None,
+                        };
+                    }
+
                     Ok(cfg)
                 }
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.description())),
@@ -77,6 +88,14 @@ pub fn load_or_default() -> Result<Config, io::Error> {
             groups: HashMap::new(),
         }),
     }
+}
+
+pub fn get_password(username: &str) -> Result<String, KeyringError> {
+    Keyring::new("saml2aws-auto", username).get_password()
+}
+
+pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> {
+    Keyring::new("saml2aws-auto", username).set_password(password)
 }
 
 pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
@@ -109,6 +128,16 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
 
 pub fn check_or_interactive_create() {
     if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
+        let cfg = load_or_default().expect("Could not load config");
+
+        if let Some(ref username) = cfg.username {
+            if let Err(_) = get_password(username) {
+                if let Some(password) = prompt("IDP Password", Some("")) {
+                    set_password(username, &password)
+                        .expect("Could not save password in credentials storage");
+                }
+            }
+        }
         return;
     }
 
@@ -133,9 +162,13 @@ pub fn check_or_interactive_create() {
 
     if let Some(username) = prompt("IDP Username", None) {
         cfg.username = username.into();
-    }
-    if let Some(password) = prompt("IDP Password", Some("")) {
-        cfg.password = password.into();
+        if let Some(password) = prompt("IDP Password", Some("")) {
+            cfg.password = password.into();
+            set_password(
+                &cfg.username.as_ref().unwrap(),
+                &cfg.password.as_ref().unwrap(),
+            ).expect("Could not save password in credentials storage");
+        }
     }
 
     cfg.save().unwrap();

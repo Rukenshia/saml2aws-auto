@@ -90,8 +90,7 @@ pub fn submit_form(
         })
     }
 
-    let body = res
-        .text()
+    let body = res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     if body.contains("Invalid username or password") {
@@ -133,8 +132,7 @@ pub fn get_login_page(
         })
     }
 
-    Ok(res
-        .text()
+    Ok(res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }
 
@@ -220,7 +218,6 @@ pub fn submit_saml_response_form(
         })
     }
 
-    Ok(res
-        .text()
+    Ok(res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }

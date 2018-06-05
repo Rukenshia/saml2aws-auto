@@ -67,8 +67,7 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
 
     // https://github.com/RReverser/serde-xml-rs/issues/64
     // remove all namespaces (this is ugly)
-    buf = buf
-        .replace("<saml:", "<")
+    buf = buf.replace("<saml:", "<")
         .replace("<samlp:", "<")
         .replace("xmlns:", "")
         .replace("xsi:", "")
@@ -93,16 +92,14 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
                 assertion.session_duration =
                     i64::from_str(&attribute.values.get(0).unwrap().value.clone()).unwrap();
             }
-            "Role" => {
-                for value in &attribute.values {
-                    let split = value.value.split(",").collect::<Vec<&str>>();
+            "Role" => for value in &attribute.values {
+                let split = value.value.split(",").collect::<Vec<&str>>();
 
-                    assertion.roles.push(Role {
-                        arn: split[0].into(),
-                        principal_arn: split[1].into(),
-                    });
-                }
-            }
+                assertion.roles.push(Role {
+                    arn: split[0].into(),
+                    principal_arn: split[1].into(),
+                });
+            },
             _ => {}
         };
     }

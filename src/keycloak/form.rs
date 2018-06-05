@@ -1,4 +1,4 @@
-use scraper::{node::Element, ElementRef, Html, Selector};
+use scraper::{ElementRef, Html, Selector, node::Element};
 
 #[derive(Debug)]
 pub enum FormMethod {
@@ -34,8 +34,7 @@ impl FormInfo {
 }
 
 pub fn extract_saml_response(doc: &Html) -> Option<String> {
-    let elements: Vec<ElementRef> = doc
-        .select(&Selector::parse("input[name=\"SAMLResponse\"]").unwrap())
+    let elements: Vec<ElementRef> = doc.select(&Selector::parse("input[name=\"SAMLResponse\"]").unwrap())
         .collect();
 
     if elements.len() == 0 {
