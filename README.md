@@ -8,6 +8,12 @@ at the same time. Accounts are organised in groups, which can be refreshed using
 The [GitHub Releases](https://github.com/Rukenshia/saml2aws-auto/releases) page includes archives for all major platforms.
 Download the release for your platform and make sure `saml2aws-auto` is in your PATH variable.
 
+If you have rust installed, you can use the following command
+
+```bash
+cargo install saml2aws-auto
+```
+
 ## Features
 
 * Retrieving AWS Credentials when authenticating via SAML (only Keycloak supported at the moment, MFA is mandatory)

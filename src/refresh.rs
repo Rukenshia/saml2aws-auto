@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::crossterm_style::{paint, Color};
+use crossterm::style::{paint, Color};
 
 use chrono::prelude::*;
 use std::str::FromStr;
@@ -186,7 +186,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                             "aws_secret_access_key",
                             aws_credentials.secret_access_key.as_str(),
                         )
-                        .set("aws_security_token", aws_credentials.session_token.as_str())
+                        .set("aws_session_token", aws_credentials.session_token.as_str())
                         .set("expiration", aws_credentials.expiration.as_str());
 
                     credentials.write_to_file(filepath).unwrap();

@@ -8,7 +8,7 @@ use keycloak::login::get_assertion_response;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::crossterm_style::{paint, Color};
+use crossterm::style::{paint, Color};
 
 pub fn command(matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {

@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use chrono::prelude::*;
-use crossterm::crossterm_style::{paint, Color};
+use crossterm::style::{paint, Color};
 use serde_yaml;
 use keyring::{Keyring, KeyringError};
 
