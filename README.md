@@ -44,7 +44,7 @@ All set!
 ? MFA Token [000000]: 123456
 ```
 
-Please note that your password will be saved in plaintext in a configuration file at `$HOME/.saml2aws-auto.yml`.
+Your password will be stored with the native credentials manager of your platform.
 
 After you've entered your MFA Token, the group will be configured for you:
 
