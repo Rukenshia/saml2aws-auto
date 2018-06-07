@@ -5,6 +5,10 @@ at the same time. Accounts are organised in groups, which can be refreshed using
 
 ## Installation
 
+```bash
+brew install rukenshia/repo/saml2aws-auto
+```
+
 The [GitHub Releases](https://github.com/Rukenshia/saml2aws-auto/releases) page includes archives for all major platforms.
 Download the release for your platform and make sure `saml2aws-auto` is in your PATH variable.
 
