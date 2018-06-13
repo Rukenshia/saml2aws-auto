@@ -223,7 +223,7 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1063,7 +1063,7 @@ dependencies = [
  "chrono 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cookie 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "crossterm 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crossterm 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "keyring 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1791,7 +1791,7 @@ dependencies = [
 "checksum crossbeam-deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fe8153ef04a7594ded05b427ffad46ddeaf22e63fd48d42b3e1e3bb4db07cae7"
 "checksum crossbeam-epoch 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9b4e2817eb773f770dcb294127c011e22771899c21d18fce7dd739c0b9832e81"
 "checksum crossbeam-utils 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d636a8b3bcc1b409d7ffd3facef8f21dcb4009626adbd0c5e6c4305c07253c7b"
-"checksum crossterm 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4aa83707de77f0c0ed9f0d7bda0d2c73e9d6f9f1a730cd24b5b2c1669bacdff2"
+"checksum crossterm 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1e86771cd668e541410ee42c83ab3fd5912e3f3812c8ea69adabb9bed01756cf"
 "checksum crypto-mac 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0999b4ff4d3446d4ddb19a63e9e00c1876e75cd7000d20e57a693b4b3f08d958"
 "checksum cssparser 0.23.7 (registry+https://github.com/rust-lang/crates.io-index)" = "67bf7d29642ecc0a0bc273caf1c3cc92bef9c7ce0684ed3f2dafa0d319018b00"
 "checksum cssparser-macros 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f3a5383ae18dbfdeb569ed62019f5bddb2a95cd2d3833313c475a0d014777805"

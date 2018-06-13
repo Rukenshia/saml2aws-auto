@@ -17,6 +17,14 @@ use saml::parse_assertion;
 
 use config;
 
+fn debug_log(msg: &str) {
+    println!(
+        "{} {}",
+        paint("DEBU").with(Color::Cyan),
+        msg
+    );
+}
+
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches, verbosity: u64) {
     let mut cfg = config::load_or_default().unwrap();
@@ -29,17 +37,12 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
     let username = matches.value_of("username").unwrap_or(&cfg_username);
     let password = matches.value_of("password").unwrap_or(&cfg_password);
 
-    let debug_prefix = paint("DEBU").with(Color::Cyan);
-
     {
         let group = match cfg.groups.get_mut(group_name) {
             Some(g) => g,
             None => {
                 if verbosity > 0 {
-                    println!(
-                        "{} match cfg.groups.get_mut(group_name) => None",
-                        debug_prefix
-                    );
+                    debug_log("match cfg.groups.get_mut(group_name) => None");
                 }
 
                 println!(
@@ -53,7 +56,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
         if group.accounts.len() == 0 {
             if verbosity > 0 {
-                println!("{} group.accounts len is 0", debug_prefix);
+                debug_log("group.accounts len is 0");
             }
             println!(
                 "Nothing to refresh. Group {} is empty.",
@@ -68,7 +71,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 Some(m) => m.into(),
                 None => {
                     if verbosity > 0 {
-                        println!("{} mfa flag not set, no valid session", debug_prefix);
+                        debug_log("mfa flag not set, no valid session");
                     }
 
                     prompt("MFA Token", Some("000000")).unwrap()
@@ -80,10 +83,14 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
         let mut cookie_jar = CookieJar::new();
 
+        if verbosity > 0 {
+            debug_log("looping through accounts");
+        }
+
         for mut account in &mut group.accounts {
             if account.session_valid() {
                 if verbosity > 0 {
-                    println!("{} session still valid", debug_prefix);
+                    debug_log("session still valid");
                 }
 
                 let now = Local::now();
@@ -99,6 +106,11 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             }
 
             print!("Refreshing {}\t", paint(&account.name).with(Color::Yellow));
+
+            if verbosity > 0 {
+                println!("");
+                debug_log(&format!("logging in at '{}'", &cfg.idp_url));
+            }
 
             let (saml_response, _) = match get_assertion_response(
                 &mut cookie_jar,
@@ -129,10 +141,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             };
 
             if verbosity > 0 {
-                println!(
-                    "\n{} got saml response, finding principal next",
-                    debug_prefix
-                );
+                debug_log("got saml response, finding principal next");
             }
 
             let assertion = match parse_assertion(&saml_response) {
@@ -159,6 +168,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 }
             };
 
+            if verbosity > 0 {
+                debug_log("making assume_role call");
+            }
+
             match assume_role(
                 &account.arn,
                 &principal,
@@ -169,10 +182,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     println!("{}", paint("SUCCESS").with(Color::Green));
 
                     if verbosity > 0 {
-                        println!(
-                            "{} assumed role. AccessKeyID: {}",
-                            debug_prefix,
-                            res.credentials.as_ref().unwrap().access_key_id
+                        debug_log(
+                            &format!("assumed role. AccessKeyID: {}",
+                            res.credentials.as_ref().unwrap().access_key_id)
                         );
                     }
 
