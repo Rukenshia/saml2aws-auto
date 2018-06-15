@@ -12,9 +12,8 @@ pub fn assume_role(
 ) -> Result<Credentials, impl Error> {
     let mut res: Response = match Client::new()
         .post("https://sts.amazonaws.com/")
-        .query(&[
-            ("Version", "2011-06-15"),
-            ("Action", "AssumeRoleWithSAML"),
+        .query(&[("Version", "2011-06-15"), ("Action", "AssumeRoleWithSAML")])
+        .form(&[
             ("PrincipalArn", principal),
             ("RoleArn", arn),
             ("SAMLAssertion", saml_assertion),
