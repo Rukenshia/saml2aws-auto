@@ -18,11 +18,7 @@ use saml::parse_assertion;
 use config;
 
 fn debug_log(msg: &str) {
-    println!(
-        "{} {}",
-        paint("DEBU").with(Color::Cyan),
-        msg
-    );
+    println!("{} {}", paint("DEBU").with(Color::Cyan), msg);
 }
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
@@ -182,29 +178,22 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     println!("{}", paint("SUCCESS").with(Color::Green));
 
                     if verbosity > 0 {
-                        debug_log(
-                            &format!("assumed role. AccessKeyID: {}",
-                            res.credentials.as_ref().unwrap().access_key_id)
-                        );
+                        debug_log(&format!("assumed role. AccessKeyID: {}", res.access_key_id));
                     }
 
                     let (mut credentials, filepath) = load_credentials_file().unwrap();
-                    let aws_credentials = &res.credentials.as_ref().unwrap();
 
                     credentials
                         .with_section(Some(account.name.as_str()))
-                        .set("aws_access_key_id", aws_credentials.access_key_id.as_str())
-                        .set(
-                            "aws_secret_access_key",
-                            aws_credentials.secret_access_key.as_str(),
-                        )
-                        .set("aws_session_token", aws_credentials.session_token.as_str())
-                        .set("expiration", aws_credentials.expiration.as_str());
+                        .set("aws_access_key_id", res.access_key_id.as_str())
+                        .set("aws_secret_access_key", res.secret_access_key.as_str())
+                        .set("aws_session_token", res.session_token.as_str())
+                        .set("expiration", res.expiration.as_str());
 
                     credentials.write_to_file(filepath).unwrap();
 
                     account.valid_until =
-                        Some(DateTime::from_str(aws_credentials.expiration.as_str()).unwrap());
+                        Some(DateTime::from_str(res.expiration.as_str()).unwrap());
                 }
                 Err(e) => {
                     println!("{}", paint("FAIL").with(Color::Red));
