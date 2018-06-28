@@ -8,11 +8,10 @@ pub fn load_credentials_file() -> Result<(ini::Ini, PathBuf), ini::ini::Error> {
     let filename = env::home_dir().unwrap().join(".aws");
 
     if !filename.exists() {
-        fs::create_dir(filename).expect(
-            "Could not create $HOME/.aws directory. Please check permissions"
-        );
+        fs::create_dir(&filename)
+            .expect("Could not create $HOME/.aws directory. Please check permissions");
     }
-    
+
     let filename = filename.join("credentials");
 
     if !filename.exists() {
