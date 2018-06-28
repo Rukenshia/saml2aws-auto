@@ -1,5 +1,5 @@
 name: saml2aws-auto
-version: "1.3.3"
+version: "1.4.0"
 author: Jan Christophersen <jan@ruken.pw>
 about: A simple to use management tool for multiple AWS account credentials when using Keycloak as Identity Provider
 settings:
@@ -27,6 +27,9 @@ subcommands:
         long: mfa
         takes_value: true
         help: MFA Token
+    - force:
+        long: force
+        help: Ignore valid sessions and refresh anyway
     - GROUP:
         required: true
         index: 1

@@ -27,6 +27,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa");
+    let force = matches.is_present("force");
 
     let cfg_username = cfg.username.as_ref().unwrap();
     let cfg_password = cfg.password.as_ref().unwrap();
@@ -61,7 +62,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             return;
         }
 
-        let mfa = match group.accounts.iter().all(|a| a.session_valid()) {
+        let mfa = match group.accounts.iter().all(|a| a.session_valid() && !force) {
             true => "000000".into(),
             false => match mfa {
                 Some(m) => m.into(),
@@ -84,7 +85,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         }
 
         for mut account in &mut group.accounts {
-            if account.session_valid() {
+            if account.session_valid() && !force {
                 if verbosity > 0 {
                     debug_log("session still valid");
                 }
