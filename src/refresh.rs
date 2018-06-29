@@ -123,6 +123,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
+                        || e.kind == KeycloakErrorKind::PasswordUpdateRequired
                     {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",

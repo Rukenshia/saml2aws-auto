@@ -90,8 +90,7 @@ pub fn submit_form(
         })
     }
 
-    let body = res
-        .text()
+    let body = res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     if body.contains("Invalid username or password") {
@@ -99,6 +98,8 @@ pub fn submit_form(
             KeycloakErrorKind::InvalidCredentials,
             "Invalid username or password",
         ));
+    } else if body.contains("Update password") {
+        return Err(KeycloakError::new(KeycloakErrorKind::PasswordUpdateRequired, "You need to update your password in Keycloak before you can login. Please visit the website to change your password."));
     }
 
     Ok(body)
@@ -133,8 +134,7 @@ pub fn get_login_page(
         })
     }
 
-    Ok(res
-        .text()
+    Ok(res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }
 
@@ -220,7 +220,6 @@ pub fn submit_saml_response_form(
         })
     }
 
-    Ok(res
-        .text()
+    Ok(res.text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }
