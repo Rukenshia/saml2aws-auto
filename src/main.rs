@@ -43,6 +43,8 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("groups") {
         groups::command(matches)
+    } else if let Some(_) = matches.subcommand_matches("configure") {
+        config::interactive_create()
     } else if let Some(matches) = matches.subcommand_matches("refresh") {
         refresh::command(matches, verbosity)
     }

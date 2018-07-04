@@ -126,21 +126,7 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
     return Some(buf.trim().into());
 }
 
-pub fn check_or_interactive_create() {
-    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
-        let cfg = load_or_default().expect("Could not load config");
-
-        if let Some(ref username) = cfg.username {
-            if let Err(_) = get_password(username) {
-                if let Some(password) = prompt("IDP Password", Some("")) {
-                    set_password(username, &password)
-                        .expect("Could not save password in credentials storage");
-                }
-            }
-        }
-        return;
-    }
-
+pub fn interactive_create() {
     println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
@@ -173,6 +159,24 @@ pub fn check_or_interactive_create() {
 
     cfg.save().unwrap();
     println!("\nAll set!\n");
+}
+
+pub fn check_or_interactive_create() {
+    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
+        let cfg = load_or_default().expect("Could not load config");
+
+        if let Some(ref username) = cfg.username {
+            if let Err(_) = get_password(username) {
+                if let Some(password) = prompt("IDP Password", Some("")) {
+                    set_password(username, &password)
+                        .expect("Could not save password in credentials storage");
+                }
+            }
+        }
+        return;
+    }
+
+    interactive_create();
 }
 
 impl Config {
