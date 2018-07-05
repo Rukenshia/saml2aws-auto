@@ -7,7 +7,7 @@ use scraper::{Html, Selector};
 
 pub mod assume_role;
 pub mod credentials;
-mod xml;
+pub mod xml;
 
 #[derive(Debug)]
 pub struct AWSAccountInfo {

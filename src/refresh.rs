@@ -5,13 +5,12 @@ use clap::ArgMatches;
 use crossterm::style::{paint, Color};
 
 use chrono::prelude::*;
-use chrono::FixedOffset;
-use std::cell::RefCell;
 use std::str::FromStr;
 use std::thread;
 
 use aws::assume_role::assume_role;
 use aws::credentials::load_credentials_file;
+use aws::xml::Credentials;
 use config::prompt;
 use cookie::CookieJar;
 use keycloak::login::get_assertion_response;
@@ -65,9 +64,14 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             return;
         }
 
-        let mfa = match group.accounts.iter().all(|a| a.session_valid() && !force) {
-            true => "000000".into(),
-            false => match mfa {
+        if group.accounts.iter().all(|a| a.session_valid()) && !force {
+            println!(
+                "Nothing to refresh. All accounts have valid sessions. Use --force to overwrite."
+            );
+            return;
+        }
+
+        let mfa = match mfa {
                 Some(m) => m.into(),
                 None => {
                     if verbosity > 0 {
@@ -76,43 +80,48 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
                     prompt("MFA Token", Some("000000")).unwrap()
                 }
-            },
-        };
+            };
 
         let mut cookie_jar = CookieJar::new();
+
+        {
+            // Do an initial login to fill our cookie jar
+
+            match get_assertion_response(
+                &mut cookie_jar,
+                &cfg.idp_url,
+                username,
+                password,
+                &mfa.trim(),
+                false,
+            ) {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("Initial login {}", paint("FAIL").with(Color::Red));
+
+                    if e.kind == KeycloakErrorKind::InvalidCredentials
+                        || e.kind == KeycloakErrorKind::InvalidToken
+                        || e.kind == KeycloakErrorKind::PasswordUpdateRequired
+                    {
+                        println!(
+                            "\n{} Cannot recover from error:\n\n\t{}\n",
+                            paint("!").with(Color::Red),
+                            paint(e.description()).with(Color::Red)
+                        );
+                    }
+
+                    return;
+                }
+            };
+            println!("Initial login {}", paint("SUCCESS").with(Color::Green));
+        }
 
         if verbosity > 0 {
             debug_log("looping through accounts");
         }
 
-        // refresh first account
-        {
-            let account = &mut group.accounts[0];
-
-            let (expiration, new_jar) = match refresh_account(
-                group.session_duration,
-                &account,
-                cookie_jar,
-                &cfg.idp_url,
-                username,
-                password,
-                &mfa,
-                force,
-                verbosity,
-            ) {
-                Ok((expiration, cookie_jar)) => (expiration, cookie_jar),
-                Err(e) => {
-                    println!("{}", e);
-                    return;
-                }
-            };
-            account.valid_until = Some(expiration);
-
-            cookie_jar = new_jar;
-        }
-
         let mut threads: Vec<
-            thread::JoinHandle<Result<(DateTime<FixedOffset>, CookieJar), Box<Error + Send>>>,
+            thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>>>,
         > = vec![];
 
         for account in &group.accounts {
@@ -139,9 +148,31 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             }));
         }
 
+        let mut accounts: Vec<config::Account> = vec![];
+
+        let (mut credentials_file, filepath) = load_credentials_file().unwrap();
+
         for t in threads {
             match t.join() {
-                Ok(_) => {}
+                Ok(res) => match res {
+                    Ok((output, _)) => {
+                        if let Some(credentials) = output.credentials {
+                            credentials_file
+                                .with_section(Some(output.account.name.as_str()))
+                                .set("aws_access_key_id", credentials.access_key_id.as_str())
+                                .set(
+                                    "aws_secret_access_key",
+                                    credentials.secret_access_key.as_str(),
+                                )
+                                .set("aws_session_token", credentials.session_token.as_str())
+                                .set("expiration", credentials.expiration.as_str());
+                        }
+                        accounts.push(output.account);
+                    }
+                    Err(e) => {
+                        println!("\t{}", paint(e.description()).with(Color::Red));
+                    }
+                },
                 Err(e) => {
                     println!(
                         "\t{}",
@@ -151,6 +182,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                 }
             };
         }
+        credentials_file.write_to_file(filepath).unwrap();
+
+        group.accounts = accounts;
 
         println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", paint(group_name).with(Color::Yellow));
         println!(
@@ -160,6 +194,12 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
     }
 
     cfg.save().unwrap();
+}
+
+#[derive(Debug)]
+struct RefreshAccountOutput {
+    pub account: config::Account,
+    pub credentials: Option<Credentials>,
 }
 
 fn refresh_account(
@@ -172,7 +212,7 @@ fn refresh_account(
     mfa: &str,
     force: bool,
     verbosity: u64,
-) -> Result<(DateTime<FixedOffset>, CookieJar), Box<Error + Send>> {
+) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
     if account.session_valid() && !force {
         if verbosity > 0 {
             debug_log("session still valid");
@@ -186,7 +226,13 @@ fn refresh_account(
             paint(&account.name).with(Color::Yellow),
             paint(&format!("valid for {} minutes", expiration.num_minutes())).with(Color::Green)
         );
-        return Ok((account.valid_until.unwrap(), cookie_jar));
+        return Ok((
+            RefreshAccountOutput {
+                account: account.clone(),
+                credentials: None,
+            },
+            cookie_jar,
+        ));
     }
 
     if verbosity > 0 {
@@ -264,19 +310,14 @@ fn refresh_account(
                 debug_log(&format!("assumed role. AccessKeyID: {}", res.access_key_id));
             }
 
-            let (mut credentials, filepath) = load_credentials_file().unwrap();
-
-            credentials
-                .with_section(Some(account.name.as_str()))
-                .set("aws_access_key_id", res.access_key_id.as_str())
-                .set("aws_secret_access_key", res.secret_access_key.as_str())
-                .set("aws_session_token", res.session_token.as_str())
-                .set("expiration", res.expiration.as_str());
-
-            credentials.write_to_file(filepath).unwrap();
+            let mut account = account.clone();
+            account.valid_until = Some(DateTime::from_str(res.expiration.as_str()).unwrap());
 
             return Ok((
-                DateTime::from_str(res.expiration.as_str()).unwrap(),
+                RefreshAccountOutput {
+                    account,
+                    credentials: Some(res),
+                },
                 cookie_jar,
             ));
         }
