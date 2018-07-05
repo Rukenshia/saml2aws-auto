@@ -1,10 +1,7 @@
 #!/bin/bash
+GROUP="$1"
 
-echo "Backing up aws credentials"
-mv ~/.aws/credentials ~/.aws/credentials.old
-./target/release/saml2aws-auto refresh all --force
-
-accounts=$(yq r ~/.saml2aws-auto.yml 'groups.all.accounts[*].name' | awk '{print $2}')
+accounts=$(yq r ~/.saml2aws-auto.yml 'groups.'"$GROUP"'.accounts[*].name' | awk '{print $2}')
 
 for a in $accounts; do
 	printf "Testing %s" "$a"
@@ -17,7 +14,4 @@ for a in $accounts; do
 		printf " SUCCESS\\n"
 	fi
 done
-
-echo "Restoring aws credentials"
-mv ~/.aws/credentials.old ~/.aws/credentials
 
