@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io;
@@ -7,9 +6,11 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use chrono::prelude::*;
-use crossterm::style::{paint, Color};
-use serde_yaml;
+use crossterm::style::Color;
+use crossterm::Crossterm;
+use dirs;
 use keyring::{Keyring, KeyringError};
+use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -38,7 +39,7 @@ pub struct Account {
 }
 
 fn default_filename() -> String {
-    let mut path = env::home_dir().unwrap();
+    let mut path = dirs::home_dir().unwrap();
     path.push(".saml2aws-auto.yml");
 
     format!("{}", path.to_str().unwrap())
@@ -99,18 +100,20 @@ pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> 
 }
 
 pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let crossterm = Crossterm::new();
+
     let mut buf = String::new();
     if let Some(default) = default {
         print!(
             "{} {}",
-            paint("?").with(Color::Green),
-            paint(&format!("{} [{}]: ", question, default)),
+            crossterm.paint("?").with(Color::Green),
+            crossterm.paint(&format!("{} [{}]: ", question, default)),
         );
     } else {
         print!(
             "{} {}",
-            paint("?").with(Color::Green),
-            paint(&format!("{}: ", question)),
+            crossterm.paint("?").with(Color::Green),
+            crossterm.paint(&format!("{}: ", question)),
         );
     }
 
@@ -127,11 +130,15 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
 }
 
 pub fn interactive_create() {
+    let crossterm = Crossterm::new();
+
     println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
-        paint("the exact path to the saml client").with(Color::Yellow)
+        crossterm
+            .paint("the exact path to the saml client")
+            .with(Color::Yellow)
     );
 
     let mut cfg = Config {

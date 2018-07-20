@@ -8,9 +8,12 @@ use keycloak::login::get_assertion_response;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::style::{paint, Color};
+use crossterm::style::Color;
+use crossterm::Crossterm;
 
 pub fn command(matches: &ArgMatches) {
+    let crossterm = Crossterm::new();
+
     if let Some(_) = matches.subcommand_matches("list") {
         list()
     } else if let Some(matches) = matches.subcommand_matches("delete") {
@@ -50,8 +53,10 @@ pub fn command(matches: &ArgMatches) {
         if prefix.is_none() && account_names.is_none() {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
-                paint(name).with(Color::Yellow),
-                paint("Must specify either --prefix or --accounts flag").with(Color::Red)
+                crossterm.paint(name).with(Color::Yellow),
+                crossterm
+                    .paint("Must specify either --prefix or --accounts flag")
+                    .with(Color::Red)
             );
             return;
         }
@@ -71,10 +76,10 @@ pub fn command(matches: &ArgMatches) {
         ) {
             Ok(r) => r,
             Err(e) => {
-                println!("{}", paint("FAIL").with(Color::Red));
+                println!("{}", crossterm.paint("FAIL").with(Color::Red));
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    paint(e.description()).with(Color::Red)
+                    crossterm.paint(e.description()).with(Color::Red)
                 );
                 return;
             }
@@ -83,10 +88,10 @@ pub fn command(matches: &ArgMatches) {
         let aws_list = match extract_saml_accounts(&web_response.unwrap()) {
             Ok(l) => l,
             Err(e) => {
-                println!("{}", paint("FAIL").with(Color::Red));
+                println!("{}", crossterm.paint("FAIL").with(Color::Red));
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    paint(e.description()).with(Color::Red)
+                    crossterm.paint(e.description()).with(Color::Red)
                 );
                 return;
             }
@@ -100,33 +105,36 @@ pub fn command(matches: &ArgMatches) {
                 get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
         }
 
-        println!("\t{}", paint("SUCCESS").with(Color::Green));
+        println!("\t{}", crossterm.paint("SUCCESS").with(Color::Green));
 
         add(name, session_duration, accounts, append)
     }
 }
 
 fn list() {
+    let crossterm = Crossterm::new();
     let cfg = config::load_or_default().unwrap();
 
     for (name, group) in &cfg.groups {
-        println!("\n{}:", paint(name).with(Color::Yellow));
+        println!("\n{}:", crossterm.paint(name).with(Color::Yellow));
 
         if let Some(duration) = group.session_duration {
             println!(
                 "\t{}: {}",
-                paint("Session Duration"),
-                paint(&format!("{} seconds", duration)).with(Color::Blue)
+                crossterm.paint("Session Duration"),
+                crossterm
+                    .paint(&format!("{} seconds", duration))
+                    .with(Color::Blue)
             );
         } else {
             println!(
                 "\t{}: {}",
-                paint("Session Duration"),
-                paint("implicit").with(Color::Blue)
+                crossterm.paint("Session Duration"),
+                crossterm.paint("implicit").with(Color::Blue)
             );
         }
 
-        println!("\n\t{}", paint("Sessions"));
+        println!("\n\t{}", crossterm.paint("Sessions"));
         for account in &group.accounts {
             match account.valid_until {
                 Some(expiration) => {
@@ -136,14 +144,15 @@ fn list() {
                     if expiration.num_minutes() < 0 {
                         println!(
                             "\t{}: {}",
-                            paint(&account.name),
-                            paint("no valid session").with(Color::Red)
+                            crossterm.paint(&account.name),
+                            crossterm.paint("no valid session").with(Color::Red)
                         );
                     } else {
                         println!(
                             "\t{}: {}",
-                            paint(&account.name),
-                            paint(&format!("{} minutes left", expiration.num_minutes()))
+                            crossterm.paint(&account.name),
+                            crossterm
+                                .paint(&format!("{} minutes left", expiration.num_minutes()))
                                 .with(Color::Green)
                         );
                     }
@@ -151,29 +160,32 @@ fn list() {
                 None => {
                     println!(
                         "\t{}: {}",
-                        paint(&account.name),
-                        paint("no valid session").with(Color::Red)
+                        crossterm.paint(&account.name),
+                        crossterm.paint("no valid session").with(Color::Red)
                     );
                 }
             };
         }
 
-        println!("\n\t{}", paint("ARNs"));
+        println!("\n\t{}", crossterm.paint("ARNs"));
         for account in &group.accounts {
-            println!("\t{}: {}", paint(&account.name), account.arn,);
+            println!("\t{}: {}", crossterm.paint(&account.name), account.arn,);
         }
         println!("");
     }
 }
 
 fn delete(name: &str) {
+    let crossterm = Crossterm::new();
     let mut cfg = config::load_or_default().unwrap();
 
     if !cfg.groups.contains_key(name) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
-            paint(name).with(Color::Yellow),
-            paint("The specified group does not exist").with(Color::Red)
+            crossterm.paint(name).with(Color::Yellow),
+            crossterm
+                .paint("The specified group does not exist")
+                .with(Color::Red)
         );
         return;
     }
@@ -182,11 +194,12 @@ fn delete(name: &str) {
     cfg.save().unwrap();
     println!(
         "\nSuccessfully deleted group {}.\n",
-        paint(name).with(Color::Yellow)
+        crossterm.paint(name).with(Color::Yellow)
     );
 }
 
 fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool) {
+    let crossterm = Crossterm::new();
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -226,7 +239,7 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
             },
         );
     }
-    println!("\n{}:", paint(name).with(Color::Yellow));
+    println!("\n{}:", crossterm.paint(name).with(Color::Yellow));
 
     for account in &cfg.groups.get(name).unwrap().accounts {
         println!("\t{}: {}", account.name, account.arn,);

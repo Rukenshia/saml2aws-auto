@@ -10,6 +10,7 @@ extern crate serde_yaml;
 
 extern crate base64;
 extern crate cookie;
+extern crate dirs;
 extern crate ini;
 extern crate keyring;
 extern crate reqwest;

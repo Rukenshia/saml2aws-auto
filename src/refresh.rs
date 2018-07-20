@@ -2,7 +2,8 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::style::{paint, Color};
+use crossterm::style::Color;
+use crossterm::Crossterm;
 
 use chrono::prelude::*;
 use std::str::FromStr;
@@ -20,11 +21,13 @@ use saml::parse_assertion;
 use config;
 
 fn debug_log(msg: &str) {
-    println!("{} {}", paint("DEBU").with(Color::Cyan), msg);
+    let crossterm = Crossterm::new();
+    println!("{} {}", crossterm.paint("DEBU").with(Color::Cyan), msg);
 }
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches, verbosity: u64) {
+    let crossterm = Crossterm::new();
     let mut cfg = config::load_or_default().unwrap();
 
     let group_name = matches.value_of("GROUP").unwrap();
@@ -46,8 +49,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
                 println!(
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                    paint(group_name).with(Color::Yellow),
-                    paint("The specified group does not exist.").with(Color::Red)
+                    crossterm.paint(group_name).with(Color::Yellow),
+                    crossterm
+                        .paint("The specified group does not exist.")
+                        .with(Color::Red)
                 );
                 return;
             }
@@ -59,7 +64,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             }
             println!(
                 "Nothing to refresh. Group {} is empty.",
-                paint(group_name).with(Color::Yellow)
+                crossterm.paint(group_name).with(Color::Yellow)
             );
             return;
         }
@@ -72,15 +77,15 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         }
 
         let mfa = match mfa {
-                Some(m) => m.into(),
-                None => {
-                    if verbosity > 0 {
-                        debug_log("mfa flag not set, no valid session");
-                    }
-
-                    prompt("MFA Token", Some("000000")).unwrap()
+            Some(m) => m.into(),
+            None => {
+                if verbosity > 0 {
+                    debug_log("mfa flag not set, no valid session");
                 }
-            };
+
+                prompt("MFA Token", Some("000000")).unwrap()
+            }
+        };
 
         let mut cookie_jar = CookieJar::new();
 
@@ -97,7 +102,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!("Initial login {}", paint("FAIL").with(Color::Red));
+                    println!("Initial login {}", crossterm.paint("FAIL").with(Color::Red));
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
@@ -105,15 +110,18 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
-                            paint("!").with(Color::Red),
-                            paint(e.description()).with(Color::Red)
+                            crossterm.paint("!").with(Color::Red),
+                            crossterm.paint(e.description()).with(Color::Red)
                         );
                     }
 
                     return;
                 }
             };
-            println!("Initial login {}", paint("SUCCESS").with(Color::Green));
+            println!(
+                "Initial login {}",
+                crossterm.paint("SUCCESS").with(Color::Green)
+            );
         }
 
         if verbosity > 0 {
@@ -170,13 +178,14 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                         accounts.push(output.account);
                     }
                     Err(e) => {
-                        println!("\t{}", paint(e.description()).with(Color::Red));
+                        println!("\t{}", crossterm.paint(e.description()).with(Color::Red));
                     }
                 },
                 Err(e) => {
                     println!(
                         "\t{}",
-                        paint(e.downcast_ref::<Box<Error>>().unwrap().description())
+                        crossterm
+                            .paint(e.downcast_ref::<Box<Error>>().unwrap().description())
                             .with(Color::Red)
                     );
                 }
@@ -186,10 +195,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
         group.accounts = accounts;
 
-        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", paint(group_name).with(Color::Yellow));
+        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", crossterm.paint(group_name).with(Color::Yellow));
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
-            paint(&group.accounts[0].name).with(Color::Yellow)
+            crossterm.paint(&group.accounts[0].name).with(Color::Yellow)
         );
     }
 
@@ -213,6 +222,8 @@ fn refresh_account(
     force: bool,
     verbosity: u64,
 ) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
+    let crossterm = Crossterm::new();
+
     if account.session_valid() && !force {
         if verbosity > 0 {
             debug_log("session still valid");
@@ -223,8 +234,10 @@ fn refresh_account(
         let expiration = account.valid_until.unwrap().signed_duration_since(now);
         println!(
             "Refreshing {}\t{}",
-            paint(&account.name).with(Color::Yellow),
-            paint(&format!("valid for {} minutes", expiration.num_minutes())).with(Color::Green)
+            crossterm.paint(&account.name).with(Color::Yellow),
+            crossterm
+                .paint(&format!("valid for {} minutes", expiration.num_minutes()))
+                .with(Color::Green)
         );
         return Ok((
             RefreshAccountOutput {
@@ -250,7 +263,11 @@ fn refresh_account(
     ) {
         Ok(r) => r,
         Err(e) => {
-            println!("{} {}", account.name, paint("FAIL").with(Color::Red));
+            println!(
+                "{} {}",
+                account.name,
+                crossterm.paint("FAIL").with(Color::Red)
+            );
 
             if e.kind == KeycloakErrorKind::InvalidCredentials
                 || e.kind == KeycloakErrorKind::InvalidToken
@@ -258,8 +275,8 @@ fn refresh_account(
             {
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
-                    paint("!").with(Color::Red),
-                    paint(e.description()).with(Color::Red)
+                    crossterm.paint("!").with(Color::Red),
+                    crossterm.paint(e.description()).with(Color::Red)
                 );
             }
 
@@ -304,7 +321,11 @@ fn refresh_account(
         session_duration.or(Some(assertion.session_duration)),
     ) {
         Ok(res) => {
-            println!("{} {}", account.name, paint("SUCCESS").with(Color::Green));
+            println!(
+                "{} {}",
+                account.name,
+                crossterm.paint("SUCCESS").with(Color::Green)
+            );
 
             if verbosity > 0 {
                 debug_log(&format!("assumed role. AccessKeyID: {}", res.access_key_id));
@@ -322,7 +343,11 @@ fn refresh_account(
             ));
         }
         Err(e) => {
-            println!("{} {}", account.name, paint("FAIL").with(Color::Red));
+            println!(
+                "{} {}",
+                account.name,
+                crossterm.paint("FAIL").with(Color::Red)
+            );
             return Err(Box::new(e));
         }
     };
