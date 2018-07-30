@@ -8,6 +8,7 @@ use crossterm::Crossterm;
 use chrono::prelude::*;
 use std::str::FromStr;
 use std::thread;
+use std::collections::HashMap;
 
 use aws::assume_role::assume_role;
 use aws::credentials::load_credentials_file;
@@ -156,7 +157,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             }));
         }
 
-        let mut accounts: Vec<config::Account> = vec![];
+        let mut accounts: HashMap<String, Option<DateTime<FixedOffset>>> = HashMap::new();
 
         let (mut credentials_file, filepath) = load_credentials_file().unwrap();
 
@@ -175,7 +176,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                                 .set("aws_session_token", credentials.session_token.as_str())
                                 .set("expiration", credentials.expiration.as_str());
                         }
-                        accounts.push(output.account);
+                        accounts.insert(output.account.arn, output.account.valid_until);
                     }
                     Err(e) => {
                         println!("\t{}", crossterm.paint(e.description()).with(Color::Red));
@@ -193,7 +194,14 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         }
         credentials_file.write_to_file(filepath).unwrap();
 
-        group.accounts = accounts;
+        // update valid_until fields
+        for account in &mut group.accounts {
+            if !accounts.contains_key(&account.arn) {
+                continue
+            }
+
+            account.valid_until = *accounts.get(&account.arn).unwrap();
+        }
 
         println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", crossterm.paint(group_name).with(Color::Yellow));
         println!(
