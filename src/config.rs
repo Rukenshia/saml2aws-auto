@@ -81,13 +81,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.description())),
             }
         }
-        None => Ok(Config {
-            filename: default_filename(),
-            idp_url: "localhost".into(),
-            username: None,
-            password: None,
-            groups: HashMap::new(),
-        }),
+        None => Ok(Config::default()),
     }
 }
 
@@ -122,14 +116,17 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
         return default.map(|d| d.into());
     }
 
-    if default.is_none() && buf.len() == 0 {
-        return prompt(question, default);
+    if buf == "\n" {
+        return match default {
+            Some(default) => Some(default.into()),
+            None => prompt(question, default),
+        };
     }
 
     return Some(buf.trim().into());
 }
 
-pub fn interactive_create() {
+pub fn interactive_create(default: Config) {
     let crossterm = Crossterm::new();
 
     println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
@@ -141,21 +138,30 @@ pub fn interactive_create() {
             .with(Color::Yellow)
     );
 
-    let mut cfg = Config {
-        filename: default_filename(),
-        idp_url: "localhost".into(),
-        username: None,
-        password: None,
-        groups: HashMap::new(),
-    };
+    let mut cfg = default;
 
     if let Some(idp_url) = prompt("IDP URL", Some(&cfg.idp_url)) {
         cfg.idp_url = idp_url.into();
     }
 
-    if let Some(username) = prompt("IDP Username", None) {
-        cfg.username = username.into();
-        if let Some(password) = prompt("IDP Password", Some("")) {
+    if let Some(username) = prompt(
+        "IDP Username",
+        match cfg.username {
+            Some(ref s) => Some(s),
+            None => None,
+        },
+    ) {
+        cfg.username = Some(username);
+        if let Some(password) = prompt(
+            "IDP Password",
+            match get_password(&cfg.username.as_ref().unwrap()) {
+                Ok(ref p) => Some(p),
+                Err(e) => {
+                    println!("{}", e);
+                    Some("")
+                }
+            },
+        ) {
             cfg.password = password.into();
             set_password(
                 &cfg.username.as_ref().unwrap(),
@@ -164,8 +170,10 @@ pub fn interactive_create() {
         }
     }
 
+    println!("{}", cfg.username.as_ref().unwrap());
+
     cfg.save().unwrap();
-    println!("\nAll set!\n");
+    println!("\nAll set!\nIf you need to reconfigure your details, use {}", crossterm.paint("saml2aws-auto configure").with(Color::Yellow));
 }
 
 pub fn check_or_interactive_create() {
@@ -183,10 +191,20 @@ pub fn check_or_interactive_create() {
         return;
     }
 
-    interactive_create();
+    interactive_create(Config::default());
 }
 
 impl Config {
+    pub fn default() -> Self {
+        Config {
+            filename: default_filename(),
+            idp_url: "localhost".into(),
+            username: None,
+            password: None,
+            groups: HashMap::new(),
+        }
+    }
+
     pub fn save(&self) -> Result<(), io::Error> {
         let f = File::create(&self.filename)?;
 

@@ -88,6 +88,10 @@ Example:
         aws --profile my-accounts-staging s3 ls
 ```
 
+## Changing Password / Username / Other Configuration
+
+You can use `saml2aws-auto configure` to reconfigure your details.
+
 ## Usage
 
 You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
