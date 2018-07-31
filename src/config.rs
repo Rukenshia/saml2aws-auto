@@ -116,7 +116,7 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
         return default.map(|d| d.into());
     }
 
-    if buf.len() == 0 {
+    if buf == "\n" {
         return match default {
             Some(default) => Some(default.into()),
             None => prompt(question, default),
@@ -173,7 +173,7 @@ pub fn interactive_create(default: Config) {
     println!("{}", cfg.username.as_ref().unwrap());
 
     cfg.save().unwrap();
-    println!("\nAll set!\n");
+    println!("\nAll set!\nIf you need to reconfigure your details, use {}", crossterm.paint("saml2aws-auto configure").with(Color::Yellow));
 }
 
 pub fn check_or_interactive_create() {
