@@ -45,7 +45,8 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("groups") {
         groups::command(matches)
     } else if let Some(_) = matches.subcommand_matches("configure") {
-        config::interactive_create()
+        let cfg = config::load_or_default().expect("Internal error when trying to read config. Please open an issue on GitHub.");
+        config::interactive_create(cfg)
     } else if let Some(matches) = matches.subcommand_matches("refresh") {
         refresh::command(matches, verbosity)
     }
