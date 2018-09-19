@@ -39,6 +39,11 @@ pub struct Account {
     pub valid_until: Option<DateTime<FixedOffset>>,
 }
 
+#[cfg(windows)]
+const LINE_ENDING: &'static str = "\r\n";
+#[cfg(not(windows))]
+const LINE_ENDING: &'static str = "\n";
+
 fn default_filename() -> String {
     let mut path = dirs::home_dir().unwrap();
     path.push(".saml2aws-auto.yml");
@@ -117,7 +122,7 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
         return default.map(|d| d.into());
     }
 
-    if buf == "\n" {
+    if buf == LINE_ENDING {
         return match default {
             Some(default) => Some(default.into()),
             None => prompt(question, default),
@@ -170,8 +175,6 @@ pub fn interactive_create(default: Config) {
             ).expect("Could not save password in credentials storage");
         }
     }
-
-    println!("{}", cfg.username.as_ref().unwrap());
 
     cfg.save().unwrap();
     println!(
