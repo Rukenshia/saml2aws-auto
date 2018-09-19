@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::panic;
 use std::path::Path;
 
 use chrono::prelude::*;
@@ -173,20 +174,32 @@ pub fn interactive_create(default: Config) {
     println!("{}", cfg.username.as_ref().unwrap());
 
     cfg.save().unwrap();
-    println!("\nAll set!\nIf you need to reconfigure your details, use {}", crossterm.paint("saml2aws-auto configure").with(Color::Yellow));
+    println!(
+        "\nAll set!\nIf you need to reconfigure your details, use {}",
+        crossterm
+            .paint("saml2aws-auto configure")
+            .with(Color::Yellow)
+    );
 }
 
 pub fn check_or_interactive_create() {
+    let crossterm = Crossterm::new();
+
     if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
         let cfg = load_or_default().expect("Could not load config");
 
         if let Some(ref username) = cfg.username {
-            if let Err(_) = get_password(username) {
-                if let Some(password) = prompt("IDP Password", Some("")) {
-                    set_password(username, &password)
-                        .expect("Could not save password in credentials storage");
+            if let Err(_) = panic::catch_unwind(|| {
+                if let Err(_) = get_password(username) {
+                    if let Some(password) = prompt("IDP Password", Some("")) {
+                        set_password(username, &password)
+                            .expect("Could not save password in credentials storage");
+                    }
                 }
-            }
+            }) {
+                println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
+                         crossterm.paint("WARNING").with(Color::Yellow));
+            };
         }
         return;
     }
