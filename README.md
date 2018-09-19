@@ -95,3 +95,9 @@ You can use `saml2aws-auto configure` to reconfigure your details.
 ## Usage
 
 You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
+
+## Troubleshooting
+
+Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--password` flag with the `groups add`
+and `refresh` commands to circumvent this.
+
