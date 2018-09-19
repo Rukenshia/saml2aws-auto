@@ -1,5 +1,5 @@
 name: saml2aws-auto
-version: "1.6.4"
+version: "1.6.5"
 author: Jan Christophersen <jan@ruken.pw>
 about: A simple to use management tool for multiple AWS account credentials when using Keycloak as Identity Provider
 settings:
