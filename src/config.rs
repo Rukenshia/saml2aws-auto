@@ -185,11 +185,25 @@ pub fn interactive_create(default: Config) {
     );
 }
 
-pub fn check_or_interactive_create() {
+pub fn check_or_interactive_create() -> bool {
     let crossterm = Crossterm::new();
 
     if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
-        let cfg = load_or_default().expect("Could not load config");
+        let cfg = match load_or_default() {
+            Ok(c) => c,
+            Err(e) => {
+                println!(
+                    "{}: {}",
+                    crossterm
+                        .paint("Could not load the saml2aws-auto config file")
+                        .with(Color::Red),
+                    e
+                );
+                println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
+                println!("If you cannot fix this error, delete the saml2aws-auto.yml file and re-add your groups.");
+                return false;
+            }
+        };
 
         if let Some(ref username) = cfg.username {
             if let Err(_) = panic::catch_unwind(|| {
@@ -202,12 +216,14 @@ pub fn check_or_interactive_create() {
             }) {
                 println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
                          crossterm.paint("WARNING").with(Color::Yellow));
+                return false;
             };
         }
-        return;
+        return true;
     }
 
     interactive_create(Config::default());
+    return true;
 }
 
 impl Config {

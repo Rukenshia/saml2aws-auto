@@ -105,9 +105,15 @@ pub fn command(matches: &ArgMatches) {
                 get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
         }
 
-        println!("\t{}", crossterm.paint("SUCCESS").with(Color::Green));
-
-        add(name, session_duration, accounts, append)
+        if accounts.len() == 0 {
+            println!("\t{}", crossterm.paint("WARNING").with(Color::Yellow));
+            println!("\nNo accounts were found with the given parameters. Possible errors:");
+            println!("\t- Wrong prefix/accounts used");
+            println!("\t- Wrong role used");
+        } else {
+            println!("\t{}", crossterm.paint("SUCCESS").with(Color::Green));
+            add(name, session_duration, accounts, append)
+        }
     }
 }
 
