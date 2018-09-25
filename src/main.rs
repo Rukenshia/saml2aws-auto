@@ -24,15 +24,37 @@ mod groups;
 mod keycloak;
 mod refresh;
 mod saml;
+mod update;
+
+use std::env;
+use std::io;
 
 use clap::App;
-use std::io;
+use crossterm::style::Color;
+use crossterm::Crossterm;
 
 fn main() {
     openssl_probe::init_ssl_cert_env_vars();
 
     let yaml = load_yaml!("cli.yml");
     let app = App::from_yaml(yaml);
+
+    // Check for a new version
+    if let Ok(update::VersionComparison::IsDifferent) =
+        update::compare_version(&env::var("CARGO_PKG_VERSION").unwrap())
+    {
+        let crossterm = Crossterm::new();
+
+        println!(
+            "\n\t{}",
+            crossterm
+                .paint("A new version of saml2aws-auto is available")
+                .with(Color::Green)
+        );
+        println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
+        println!("");
+    };
+
     let matches = app.get_matches();
 
     if let Some(_) = matches.subcommand_matches("version") {
