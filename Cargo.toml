@@ -8,7 +8,7 @@ authors = ["Jan Christopehrsen <jan@ruken.pw>"]
 [dependencies]
 clap = {version = "2.31", features = ["yaml"]}
 regex = "0.2"
-keyring = "0.6.0"
+keyring = "0.6.1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.7"
@@ -22,3 +22,4 @@ base64 = "~0.6.0"
 rust-ini = "0.12"
 dirs = "1.0.2"
 openssl-probe = "0.1.2"
+rpassword = "2.0.0"

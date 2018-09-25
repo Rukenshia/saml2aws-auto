@@ -7,10 +7,12 @@ use std::panic;
 use std::path::Path;
 
 use chrono::prelude::*;
+
 use crossterm::style::Color;
 use crossterm::Crossterm;
 use dirs;
 use keyring::{Keyring, KeyringError};
+use rpassword;
 use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -99,23 +101,64 @@ pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> 
     Keyring::new("saml2aws-auto", username).set_password(password)
 }
 
-pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
-    let crossterm = Crossterm::new();
-
-    let mut buf = String::new();
+pub fn ask_question(ct: &Crossterm, question: &str, default: Option<&str>) {
     if let Some(default) = default {
         print!(
             "{} {}",
-            crossterm.paint("?").with(Color::Green),
-            crossterm.paint(&format!("{} [{}]: ", question, default)),
+            ct.paint("?").with(Color::Green),
+            ct.paint(&format!("{} [{}]: ", question, default)),
         );
     } else {
         print!(
             "{} {}",
-            crossterm.paint("?").with(Color::Green),
-            crossterm.paint(&format!("{}: ", question)),
+            ct.paint("?").with(Color::Green),
+            ct.paint(&format!("{}: ", question)),
         );
     }
+}
+
+pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let masked: Option<String> = match default {
+        Some(s) => {
+            if s.len() == 0 {
+                None
+            } else if s.len() < 4 {
+                let formatted = format!("{}***", s.get(0..1).unwrap()).to_owned();
+                Some(formatted)
+            } else {
+                let formatted = format!("{}{}", s.get(0..4).unwrap(), "*".repeat(s.len() - 4));
+                Some(formatted)
+            }
+        }
+        None => None,
+    };
+
+    let crossterm = Crossterm::new();
+    ask_question(&crossterm, question, masked.as_ref().map(|s| s.as_str()));
+
+    let password = match rpassword::read_password() {
+        Ok(p) => p,
+        Err(_) => {
+            println!("Could not read password");
+            return default.map(|d| d.into());
+        }
+    };
+
+    if password == LINE_ENDING || password.len() == 0 {
+        return match default {
+            Some(default) => Some(default.into()),
+            None => password_prompt(question, default),
+        };
+    }
+
+    Some(password.trim().into())
+}
+
+pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let crossterm = Crossterm::new();
+    let mut buf = String::new();
+
+    ask_question(&crossterm, question, default);
 
     if let Err(_) = io::stdin().read_line(&mut buf) {
         println!("Could not read line");
@@ -129,7 +172,7 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
         };
     }
 
-    return Some(buf.trim().into());
+    Some(buf.trim().into())
 }
 
 pub fn interactive_create(default: Config) {
@@ -158,10 +201,16 @@ pub fn interactive_create(default: Config) {
         },
     ) {
         cfg.username = Some(username);
-        if let Some(password) = prompt(
+        if let Some(password) = password_prompt(
             "IDP Password",
             match get_password(&cfg.username.as_ref().unwrap()) {
-                Ok(ref p) => Some(p),
+                Ok(ref p) => {
+                    if p.len() == 0 {
+                        None
+                    } else {
+                        Some(p)
+                    }
+                }
                 Err(e) => {
                     println!("{}", e);
                     Some("")

@@ -15,6 +15,7 @@ extern crate ini;
 extern crate keyring;
 extern crate openssl_probe;
 extern crate reqwest;
+extern crate rpassword;
 extern crate scraper;
 
 mod aws;
