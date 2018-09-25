@@ -13,6 +13,7 @@ extern crate cookie;
 extern crate dirs;
 extern crate ini;
 extern crate keyring;
+extern crate openssl_probe;
 extern crate reqwest;
 extern crate scraper;
 
@@ -27,6 +28,8 @@ use clap::App;
 use std::io;
 
 fn main() {
+    openssl_probe::init_ssl_cert_env_vars();
+
     let yaml = load_yaml!("cli.yml");
     let app = App::from_yaml(yaml);
     let matches = app.get_matches();
