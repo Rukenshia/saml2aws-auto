@@ -29,7 +29,7 @@ main() {
     curl https://www.openssl.org/source/openssl-$version.tar.gz | \
         tar --strip-components=1 -xz
     AR=${triple}ar CC=${triple}gcc ./Configure \
-      --prefix=/etc/ssl \
+      --prefix=/openssl \
       no-dso \
       $os \
       -fPIC \
