@@ -2,13 +2,13 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::style::Color;
-use crossterm::Crossterm;
+use crossterm::style::{style, Color};
+use crossterm::Screen;
 
 use chrono::prelude::*;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::thread;
-use std::collections::HashMap;
 
 use aws::assume_role::assume_role;
 use aws::credentials::load_credentials_file;
@@ -22,13 +22,17 @@ use saml::parse_assertion;
 use config;
 
 fn debug_log(msg: &str) {
-    let crossterm = Crossterm::new();
-    println!("{} {}", crossterm.paint("DEBU").with(Color::Cyan), msg);
+    let screen = Screen::default();
+    println!(
+        "{} {}",
+        style("DEBU").with(Color::Cyan).into_displayable(&screen),
+        msg
+    );
 }
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches, verbosity: u64) {
-    let crossterm = Crossterm::new();
+    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     let group_name = matches.value_of("GROUP").unwrap();
@@ -50,10 +54,12 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
 
                 println!(
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                    crossterm.paint(group_name).with(Color::Yellow),
-                    crossterm
-                        .paint("The specified group does not exist.")
+                    style(group_name)
+                        .with(Color::Yellow)
+                        .into_displayable(&screen),
+                    style("The specified group does not exist.")
                         .with(Color::Red)
+                        .into_displayable(&screen)
                 );
                 return;
             }
@@ -65,7 +71,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             }
             println!(
                 "Nothing to refresh. Group {} is empty.",
-                crossterm.paint(group_name).with(Color::Yellow)
+                style(group_name)
+                    .with(Color::Yellow)
+                    .into_displayable(&screen)
             );
             return;
         }
@@ -103,7 +111,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!("Initial login {}", crossterm.paint("FAIL").with(Color::Red));
+                    println!(
+                        "Initial login {}",
+                        style("FAIL").with(Color::Red).into_displayable(&screen)
+                    );
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
@@ -111,8 +122,10 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
-                            crossterm.paint("!").with(Color::Red),
-                            crossterm.paint(e.description()).with(Color::Red)
+                            style("!").with(Color::Red).into_displayable(&screen),
+                            style(e.description())
+                                .with(Color::Red)
+                                .into_displayable(&screen)
                         );
                     }
 
@@ -121,7 +134,9 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             };
             println!(
                 "Initial login {}",
-                crossterm.paint("SUCCESS").with(Color::Green)
+                style("SUCCESS")
+                    .with(Color::Green)
+                    .into_displayable(&screen)
             );
         }
 
@@ -179,15 +194,20 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                         accounts.insert(output.account.arn, output.account.valid_until);
                     }
                     Err(e) => {
-                        println!("\t{}", crossterm.paint(e.description()).with(Color::Red));
+                        println!(
+                            "\t{}",
+                            style(e.description())
+                                .with(Color::Red)
+                                .into_displayable(&screen)
+                        );
                     }
                 },
                 Err(e) => {
                     println!(
                         "\t{}",
-                        crossterm
-                            .paint(e.downcast_ref::<Box<Error>>().unwrap().description())
+                        style(e.downcast_ref::<Box<Error>>().unwrap().description())
                             .with(Color::Red)
+                            .into_displayable(&screen)
                     );
                 }
             };
@@ -197,16 +217,18 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         // update valid_until fields
         for account in &mut group.accounts {
             if !accounts.contains_key(&account.arn) {
-                continue
+                continue;
             }
 
             account.valid_until = *accounts.get(&account.arn).unwrap();
         }
 
-        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", crossterm.paint(group_name).with(Color::Yellow));
+        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", style(group_name).with(Color::Yellow).into_displayable(&screen));
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
-            crossterm.paint(&group.accounts[0].name).with(Color::Yellow)
+            style(&group.accounts[0].name)
+                .with(Color::Yellow)
+                .into_displayable(&screen)
         );
     }
 
@@ -230,7 +252,7 @@ fn refresh_account(
     force: bool,
     verbosity: u64,
 ) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
-    let crossterm = Crossterm::new();
+    let screen = Screen::default();
 
     if account.session_valid() && !force {
         if verbosity > 0 {
@@ -242,10 +264,12 @@ fn refresh_account(
         let expiration = account.valid_until.unwrap().signed_duration_since(now);
         println!(
             "Refreshing {}\t{}",
-            crossterm.paint(&account.name).with(Color::Yellow),
-            crossterm
-                .paint(&format!("valid for {} minutes", expiration.num_minutes()))
+            style(&account.name)
+                .with(Color::Yellow)
+                .into_displayable(&screen),
+            style(&format!("valid for {} minutes", expiration.num_minutes()))
                 .with(Color::Green)
+                .into_displayable(&screen)
         );
         return Ok((
             RefreshAccountOutput {
@@ -274,7 +298,7 @@ fn refresh_account(
             println!(
                 "{} {}",
                 account.name,
-                crossterm.paint("FAIL").with(Color::Red)
+                style("FAIL").with(Color::Red).into_displayable(&screen)
             );
 
             if e.kind == KeycloakErrorKind::InvalidCredentials
@@ -283,8 +307,10 @@ fn refresh_account(
             {
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
-                    crossterm.paint("!").with(Color::Red),
-                    crossterm.paint(e.description()).with(Color::Red)
+                    style("!").with(Color::Red).into_displayable(&screen),
+                    style(e.description())
+                        .with(Color::Red)
+                        .into_displayable(&screen)
                 );
             }
 
@@ -332,7 +358,9 @@ fn refresh_account(
             println!(
                 "{} {}",
                 account.name,
-                crossterm.paint("SUCCESS").with(Color::Green)
+                style("SUCCESS")
+                    .with(Color::Green)
+                    .into_displayable(&screen)
             );
 
             if verbosity > 0 {
@@ -354,7 +382,7 @@ fn refresh_account(
             println!(
                 "{} {}",
                 account.name,
-                crossterm.paint("FAIL").with(Color::Red)
+                style("FAIL").with(Color::Red).into_displayable(&screen)
             );
             return Err(Box::new(e));
         }

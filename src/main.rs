@@ -30,8 +30,8 @@ use std::env;
 use std::io;
 
 use clap::App;
-use crossterm::style::Color;
-use crossterm::Crossterm;
+use crossterm::style::{style, Color};
+use crossterm::Screen;
 
 fn main() {
     openssl_probe::init_ssl_cert_env_vars();
@@ -43,13 +43,13 @@ fn main() {
     if let Ok(update::VersionComparison::IsDifferent) =
         update::compare_version(&env::var("CARGO_PKG_VERSION").unwrap())
     {
-        let crossterm = Crossterm::new();
+        let screen = Screen::default();
 
         println!(
             "\n\t{}",
-            crossterm
-                .paint("A new version of saml2aws-auto is available")
+            style("A new version of saml2aws-auto is available")
                 .with(Color::Green)
+                .into_displayable(&screen)
         );
         println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
         println!("");
