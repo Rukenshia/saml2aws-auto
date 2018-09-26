@@ -17,7 +17,7 @@ pub enum VersionComparison {
 
 fn get_latest_version() -> Result<VersionInfo, reqwest::Error> {
     reqwest::Client::builder()
-        .timeout(Duration::from_millis(300))
+        .timeout(Duration::from_millis(400))
         .build()?
         .get("https://api.github.com/repos/Rukenshia/saml2aws-auto/releases/latest")
         .send()?

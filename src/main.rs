@@ -26,7 +26,6 @@ mod refresh;
 mod saml;
 mod update;
 
-use std::env;
 use std::io;
 
 use clap::App;
@@ -41,7 +40,7 @@ fn main() {
 
     // Check for a new version
     if let Ok(update::VersionComparison::IsDifferent) =
-        update::compare_version(&env::var("CARGO_PKG_VERSION").unwrap())
+        update::compare_version(yaml["version"].as_str().unwrap())
     {
         let screen = Screen::default();
 
