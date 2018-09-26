@@ -211,8 +211,7 @@ pub fn interactive_create(default: Config) {
                         Some(p)
                     }
                 }
-                Err(e) => {
-                    println!("{}", e);
+                Err(_) => {
                     Some("")
                 }
             },
