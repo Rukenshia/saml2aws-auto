@@ -178,7 +178,7 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
 pub fn interactive_create(default: Config) {
     let screen = Screen::default();
 
-    println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
+    println!("\nWelcome to saml2aws-auto. Let's configure a few things to get started.");
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
@@ -256,7 +256,7 @@ pub fn check_or_interactive_create() -> bool {
         if let Some(ref username) = cfg.username {
             if let Err(_) = panic::catch_unwind(|| {
                 if let Err(_) = get_password(username) {
-                    if let Some(password) = prompt("IDP Password", Some("")) {
+                    if let Some(password) = password_prompt("IDP Password", Some("")) {
                         set_password(username, &password)
                             .expect("Could not save password in credentials storage");
                     }
