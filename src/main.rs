@@ -70,8 +70,6 @@ fn main() {
             .unwrap();
     }
 
-    debug!("hey");
-
     // Check for a new version
     if let Ok(update::VersionComparison::IsDifferent) =
         update::compare_version(yaml["version"].as_str().unwrap())

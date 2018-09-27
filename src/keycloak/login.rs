@@ -137,24 +137,26 @@ pub fn get_login_page(
     }
 
     trace!("get_login_page.send");
-    let mut res = client
-        .get(url)
-        .header(cookie)
-        .send()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+    let mut res = client.get(url).header(cookie).send().map_err(|e| {
+        trace!("get_login_page.map_err");
+        error!("get_login_page: {:?}", e);
+
+        KeycloakError::new(KeycloakErrorKind::Http, e.description())
+    })?;
 
     // Then we add cookies in the jar given the response
     trace!("get_login_page.cookies");
     if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
         raw_cookies.iter().for_each(|raw_cookie| {
+            trace!("get_login_page.cookies.iter({})", raw_cookie);
             let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
             cookie_jar.add(cookie)
         })
     }
 
     Ok(res.text().map_err(|e| {
-        trace!("get_login_page.error");
-        debug!("Login page error: {:?}", e);
+        trace!("get_login_page.end.map_err");
+        error!("get_login_page: {:?}", e);
         KeycloakError::new(KeycloakErrorKind::Io, e.description())
     })?)
 }
