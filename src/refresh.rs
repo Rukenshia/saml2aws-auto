@@ -21,17 +21,8 @@ use saml::parse_assertion;
 
 use config;
 
-fn debug_log(msg: &str) {
-    let screen = Screen::default();
-    println!(
-        "{} {}",
-        style("DEBU").with(Color::Cyan).into_displayable(&screen),
-        msg
-    );
-}
-
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
-pub fn command(matches: &ArgMatches, verbosity: u64) {
+pub fn command(matches: &ArgMatches) {
     let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
@@ -48,9 +39,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         let group = match cfg.groups.get_mut(group_name) {
             Some(g) => g,
             None => {
-                if verbosity > 0 {
-                    debug_log("match cfg.groups.get_mut(group_name) => None");
-                }
+                debug!("match cfg.groups.get_mut(group_name) => None");
 
                 println!(
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
@@ -66,9 +55,8 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         };
 
         if group.accounts.len() == 0 {
-            if verbosity > 0 {
-                debug_log("group.accounts len is 0");
-            }
+            debug!("group.accounts len is 0");
+
             println!(
                 "Nothing to refresh. Group {} is empty.",
                 style(group_name)
@@ -88,9 +76,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
         let mfa = match mfa {
             Some(m) => m.into(),
             None => {
-                if verbosity > 0 {
-                    debug_log("mfa flag not set, no valid session");
-                }
+                debug!("mfa flag not set, no valid session");
 
                 prompt("MFA Token", Some("000000")).unwrap()
             }
@@ -140,9 +126,7 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
             );
         }
 
-        if verbosity > 0 {
-            debug_log("looping through accounts");
-        }
+        trace!("refresh::command.looping_through_accounts");
 
         let mut threads: Vec<
             thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>>>,
@@ -167,7 +151,6 @@ pub fn command(matches: &ArgMatches, verbosity: u64) {
                     &password,
                     &mfa,
                     force,
-                    verbosity,
                 );
             }));
         }
@@ -250,14 +233,11 @@ fn refresh_account(
     password: &str,
     mfa: &str,
     force: bool,
-    verbosity: u64,
 ) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
     let screen = Screen::default();
 
     if account.session_valid() && !force {
-        if verbosity > 0 {
-            debug_log("session still valid");
-        }
+        debug!("refresh_account.session_still_valid");
 
         let now = Local::now();
 
@@ -280,10 +260,8 @@ fn refresh_account(
         ));
     }
 
-    if verbosity > 0 {
-        println!("");
-        debug_log(&format!("logging in at '{}'", idp_url));
-    }
+    trace!("\nrefresh_account.before_get_assertion_response",);
+    debug!("using idp at {}", idp_url);
 
     let (saml_response, _) = match get_assertion_response(
         &mut cookie_jar,
@@ -318,13 +296,12 @@ fn refresh_account(
         }
     };
 
-    if verbosity > 0 {
-        debug_log("got saml response, finding principal next");
-    }
+    trace!("refresh_account.after_get_assertion_response");
 
     let assertion = match parse_assertion(&saml_response) {
         Ok(a) => a,
         Err(e) => {
+            trace!("refresh_account.parse_assertion.err");
             return Err(Box::new(e));
         }
     };
@@ -337,6 +314,7 @@ fn refresh_account(
     {
         Some(r) => r,
         None => {
+            trace!("refresh_account.match_assertion.none");
             return Err(Box::new(io::Error::new(
                 io::ErrorKind::NotFound,
                 "Principal not found. Are you sure you have access to this account?",
@@ -344,9 +322,7 @@ fn refresh_account(
         }
     };
 
-    if verbosity > 0 {
-        debug_log("making assume_role call");
-    }
+    trace!("refresh_account.before_assume_role");
 
     match assume_role(
         &account.arn,
@@ -363,9 +339,8 @@ fn refresh_account(
                     .into_displayable(&screen)
             );
 
-            if verbosity > 0 {
-                debug_log(&format!("assumed role. AccessKeyID: {}", res.access_key_id));
-            }
+            trace!("refresh_account.after_assume_role.ok");
+            debug!("Access Key ID: {}", res.access_key_id);
 
             let mut account = account.clone();
             account.valid_until = Some(DateTime::from_str(res.expiration.as_str()).unwrap());
@@ -379,6 +354,7 @@ fn refresh_account(
             ));
         }
         Err(e) => {
+            trace!("refresh_account.after_assume_role.err");
             println!(
                 "{} {}",
                 account.name,

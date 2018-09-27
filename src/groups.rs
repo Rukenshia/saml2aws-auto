@@ -64,6 +64,7 @@ pub fn command(matches: &ArgMatches) {
         let mut accounts: Vec<Account> = vec![];
 
         print!("Listing allowed roles for your account\t");
+        trace!("command.get_assertion_response");
 
         let mut cookie_jar = CookieJar::new();
         let (_, web_response) = match get_assertion_response(
@@ -76,6 +77,8 @@ pub fn command(matches: &ArgMatches) {
         ) {
             Ok(r) => r,
             Err(e) => {
+                trace!("command.get_assertion_response.err");
+                error!("{:?}", e);
                 println!(
                     "{}",
                     style("FAIL").with(Color::Red).into_displayable(&screen)
@@ -90,9 +93,12 @@ pub fn command(matches: &ArgMatches) {
             }
         };
 
+        trace!("command.extract_saml_accounts");
         let aws_list = match extract_saml_accounts(&web_response.unwrap()) {
             Ok(l) => l,
             Err(e) => {
+                trace!("command.extract_saml_accounts.err");
+                error!("{:?}", e);
                 println!(
                     "{}",
                     style("FAIL").with(Color::Red).into_displayable(&screen)
