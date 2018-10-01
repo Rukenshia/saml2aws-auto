@@ -76,4 +76,4 @@ Example:
 
 ## Usage
 
-You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
+You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands. If you prefer reading the docs in traditional manpages you can just run `man docs/saml2aws-auto.1`.
