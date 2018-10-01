@@ -1,15 +1,19 @@
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::panic;
 use std::path::Path;
 
 use chrono::prelude::*;
-use crossterm::style::{paint, Color};
-use serde_yaml;
+
+use crossterm::style::{style, Color};
+use crossterm::Screen;
+use dirs;
 use keyring::{Keyring, KeyringError};
+use rpassword;
+use serde_yaml;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -37,8 +41,13 @@ pub struct Account {
     pub valid_until: Option<DateTime<FixedOffset>>,
 }
 
+#[cfg(windows)]
+const LINE_ENDING: &'static str = "\r\n";
+#[cfg(not(windows))]
+const LINE_ENDING: &'static str = "\n";
+
 fn default_filename() -> String {
-    let mut path = env::home_dir().unwrap();
+    let mut path = dirs::home_dir().unwrap();
     path.push(".saml2aws-auto.yml");
 
     format!("{}", path.to_str().unwrap())
@@ -80,13 +89,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.description())),
             }
         }
-        None => Ok(Config {
-            filename: default_filename(),
-            idp_url: "localhost".into(),
-            username: None,
-            password: None,
-            groups: HashMap::new(),
-        }),
+        None => Ok(Config::default()),
     }
 }
 
@@ -98,71 +101,121 @@ pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> 
     Keyring::new("saml2aws-auto", username).set_password(password)
 }
 
-pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
-    let mut buf = String::new();
+pub fn ask_question(screen: &Screen, question: &str, default: Option<&str>) {
     if let Some(default) = default {
         print!(
             "{} {}",
-            paint("?").with(Color::Green),
-            paint(&format!("{} [{}]: ", question, default)),
+            style("?").with(Color::Green).into_displayable(&screen),
+            style(&format!("{} [{}]: ", question, default)).into_displayable(&screen),
         );
     } else {
         print!(
             "{} {}",
-            paint("?").with(Color::Green),
-            paint(&format!("{}: ", question)),
+            style("?").with(Color::Green).into_displayable(&screen),
+            style(format!("{}: ", question)).into_displayable(&screen),
         );
     }
+}
+
+pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let masked: Option<String> = match default {
+        Some(s) => {
+            if s.len() == 0 {
+                None
+            } else if s.len() < 4 {
+                let formatted = format!("{}***", s.get(0..1).unwrap()).to_owned();
+                Some(formatted)
+            } else {
+                let formatted = format!("{}{}", s.get(0..4).unwrap(), "*".repeat(s.len() - 4));
+                Some(formatted)
+            }
+        }
+        None => None,
+    };
+
+    let screen = Screen::default();
+    ask_question(&screen, question, masked.as_ref().map(|s| s.as_str()));
+
+    let password = match rpassword::read_password() {
+        Ok(p) => p,
+        Err(_) => {
+            println!("Could not read password");
+            return default.map(|d| d.into());
+        }
+    };
+
+    if password == LINE_ENDING || password.len() == 0 {
+        return match default {
+            Some(default) => Some(default.into()),
+            None => password_prompt(question, default),
+        };
+    }
+
+    Some(password.trim().into())
+}
+
+pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
+    let screen = Screen::default();
+    let mut buf = String::new();
+
+    ask_question(&screen, question, default);
 
     if let Err(_) = io::stdin().read_line(&mut buf) {
         println!("Could not read line");
         return default.map(|d| d.into());
     }
 
-    if default.is_none() && buf.len() == 0 {
-        return prompt(question, default);
+    if buf == LINE_ENDING {
+        return match default {
+            Some(default) => Some(default.into()),
+            None => prompt(question, default),
+        };
     }
 
-    return Some(buf.trim().into());
+    Some(buf.trim().into())
 }
 
-pub fn check_or_interactive_create() {
-    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
-        let cfg = load_or_default().expect("Could not load config");
+pub fn interactive_create(default: Config) {
+    let screen = Screen::default();
 
-        if let Some(ref username) = cfg.username {
-            if let Err(_) = get_password(username) {
-                if let Some(password) = prompt("IDP Password", Some("")) {
-                    set_password(username, &password)
-                        .expect("Could not save password in credentials storage");
-                }
-            }
-        }
-        return;
-    }
-
-    println!("\nWelcome to saml2aws-auto. It looks like you do not have a configuration file yet.");
+    println!("\nWelcome to saml2aws-auto. Let's configure a few things to get started.");
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
-        paint("the exact path to the saml client").with(Color::Yellow)
+        style("the exact path to the saml client")
+            .with(Color::Yellow)
+            .into_displayable(&screen)
     );
 
-    let mut cfg = Config {
-        filename: default_filename(),
-        idp_url: "localhost".into(),
-        username: None,
-        password: None,
-        groups: HashMap::new(),
-    };
+    let mut cfg = default;
 
     if let Some(idp_url) = prompt("IDP URL", Some(&cfg.idp_url)) {
         cfg.idp_url = idp_url.into();
     }
 
-    if let Some(username) = prompt("IDP Username", None) {
-        cfg.username = username.into();
-        if let Some(password) = prompt("IDP Password", Some("")) {
+    if let Some(username) = prompt(
+        "IDP Username",
+        match cfg.username {
+            Some(ref s) => Some(s),
+            None => None,
+        },
+    ) {
+        cfg.username = Some(username);
+        if let Some(password) = password_prompt(
+            "IDP Password",
+            match get_password(&cfg.username.as_ref().unwrap()) {
+                Ok(ref p) => {
+                    if p.len() == 0 {
+                        None
+                    } else {
+                        Some(p)
+                    }
+                }
+                Err(_) => {
+                    Some("")
+                }
+            },
+        ) {
             cfg.password = password.into();
             set_password(
                 &cfg.username.as_ref().unwrap(),
@@ -172,10 +225,66 @@ pub fn check_or_interactive_create() {
     }
 
     cfg.save().unwrap();
-    println!("\nAll set!\n");
+    println!(
+        "\nAll set!\nIf you need to reconfigure your details, use {}",
+        style("saml2aws-auto configure")
+            .with(Color::Yellow)
+            .into_displayable(&screen)
+    );
+}
+
+pub fn check_or_interactive_create() -> bool {
+    let screen = Screen::default();
+
+    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
+        let cfg = match load_or_default() {
+            Ok(c) => c,
+            Err(e) => {
+                println!(
+                    "{}: {}",
+                    style("Could not load the saml2aws-auto config file")
+                        .with(Color::Red)
+                        .into_displayable(&screen),
+                    e
+                );
+                println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
+                println!("If you cannot fix this error, delete the saml2aws-auto.yml file and re-add your groups.");
+                return false;
+            }
+        };
+
+        if let Some(ref username) = cfg.username {
+            if let Err(_) = panic::catch_unwind(|| {
+                if let Err(_) = get_password(username) {
+                    if let Some(password) = password_prompt("IDP Password", Some("")) {
+                        set_password(username, &password)
+                            .expect("Could not save password in credentials storage");
+                    }
+                }
+            }) {
+                println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
+                         style("WARNING").with(Color::Yellow).into_displayable(&screen));
+                return false;
+            };
+        }
+        return true;
+    }
+
+    interactive_create(Config::default());
+    return true;
 }
 
 impl Config {
+    pub fn default() -> Self {
+        Config {
+            filename: default_filename(),
+            idp_url: "localhost".into(),
+            username: None,
+            password: None,
+            groups: HashMap::new(),
+        }
+    }
+
     pub fn save(&self) -> Result<(), io::Error> {
         let f = File::create(&self.filename)?;
 

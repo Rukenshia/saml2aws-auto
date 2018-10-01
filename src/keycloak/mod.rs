@@ -23,6 +23,7 @@ pub enum KeycloakErrorKind {
     InvalidCredentials,
     InvalidToken,
     FormNotFound,
+    PasswordUpdateRequired,
 }
 
 impl KeycloakError {

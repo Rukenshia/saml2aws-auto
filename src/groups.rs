@@ -8,9 +8,12 @@ use keycloak::login::get_assertion_response;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::style::{paint, Color};
+use crossterm::style::{style, Color};
+use crossterm::Screen;
 
 pub fn command(matches: &ArgMatches) {
+    let screen = Screen::default();
+
     if let Some(_) = matches.subcommand_matches("list") {
         list()
     } else if let Some(matches) = matches.subcommand_matches("delete") {
@@ -50,8 +53,10 @@ pub fn command(matches: &ArgMatches) {
         if prefix.is_none() && account_names.is_none() {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
-                paint(name).with(Color::Yellow),
-                paint("Must specify either --prefix or --accounts flag").with(Color::Red)
+                style(name).with(Color::Yellow).into_displayable(&screen),
+                style("Must specify either --prefix or --accounts flag")
+                    .with(Color::Red)
+                    .into_displayable(&screen)
             );
             return;
         }
@@ -59,6 +64,7 @@ pub fn command(matches: &ArgMatches) {
         let mut accounts: Vec<Account> = vec![];
 
         print!("Listing allowed roles for your account\t");
+        trace!("command.get_assertion_response");
 
         let mut cookie_jar = CookieJar::new();
         let (_, web_response) = match get_assertion_response(
@@ -71,22 +77,37 @@ pub fn command(matches: &ArgMatches) {
         ) {
             Ok(r) => r,
             Err(e) => {
-                println!("{}", paint("FAIL").with(Color::Red));
+                trace!("command.get_assertion_response.err");
+                error!("{:?}", e);
+                println!(
+                    "{}",
+                    style("FAIL").with(Color::Red).into_displayable(&screen)
+                );
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    paint(e.description()).with(Color::Red)
+                    style(e.description())
+                        .with(Color::Red)
+                        .into_displayable(&screen)
                 );
                 return;
             }
         };
 
+        trace!("command.extract_saml_accounts");
         let aws_list = match extract_saml_accounts(&web_response.unwrap()) {
             Ok(l) => l,
             Err(e) => {
-                println!("{}", paint("FAIL").with(Color::Red));
+                trace!("command.extract_saml_accounts.err");
+                error!("{:?}", e);
+                println!(
+                    "{}",
+                    style("FAIL").with(Color::Red).into_displayable(&screen)
+                );
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    paint(e.description()).with(Color::Red)
+                    style(e.description())
+                        .with(Color::Red)
+                        .into_displayable(&screen)
                 );
                 return;
             }
@@ -100,33 +121,57 @@ pub fn command(matches: &ArgMatches) {
                 get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
         }
 
-        println!("\t{}", paint("SUCCESS").with(Color::Green));
-
-        add(name, session_duration, accounts, append)
+        if accounts.len() == 0 {
+            println!(
+                "\t{}",
+                style("WARNING")
+                    .with(Color::Yellow)
+                    .into_displayable(&screen)
+            );
+            println!("\nNo accounts were found with the given parameters. Possible errors:");
+            println!("\t- Wrong prefix/accounts used");
+            println!("\t- Wrong role used");
+        } else {
+            println!(
+                "\t{}",
+                style("SUCCESS")
+                    .with(Color::Green)
+                    .into_displayable(&screen)
+            );
+            add(name, session_duration, accounts, append)
+        }
     }
 }
 
 fn list() {
+    let screen = Screen::default();
     let cfg = config::load_or_default().unwrap();
 
     for (name, group) in &cfg.groups {
-        println!("\n{}:", paint(name).with(Color::Yellow));
+        println!(
+            "\n{}:",
+            style(name).with(Color::Yellow).into_displayable(&screen)
+        );
 
         if let Some(duration) = group.session_duration {
             println!(
                 "\t{}: {}",
-                paint("Session Duration"),
-                paint(&format!("{} seconds", duration)).with(Color::Blue)
+                "Session Duration",
+                style(&format!("{} seconds", duration))
+                    .with(Color::Blue)
+                    .into_displayable(&screen)
             );
         } else {
             println!(
                 "\t{}: {}",
-                paint("Session Duration"),
-                paint("implicit").with(Color::Blue)
+                "Session Duration",
+                style("implicit")
+                    .with(Color::Blue)
+                    .into_displayable(&screen)
             );
         }
 
-        println!("\n\t{}", paint("Sessions"));
+        println!("\n\t{}", "Sessions");
         for account in &group.accounts {
             match account.valid_until {
                 Some(expiration) => {
@@ -136,44 +181,52 @@ fn list() {
                     if expiration.num_minutes() < 0 {
                         println!(
                             "\t{}: {}",
-                            paint(&account.name),
-                            paint("no valid session").with(Color::Red)
+                            &account.name,
+                            style("no valid session")
+                                .with(Color::Red)
+                                .into_displayable(&screen)
                         );
                     } else {
                         println!(
                             "\t{}: {}",
-                            paint(&account.name),
-                            paint(&format!("{} minutes left", expiration.num_minutes()))
+                            &account.name,
+                            style(&format!("{} minutes left", expiration.num_minutes()))
                                 .with(Color::Green)
+                                .into_displayable(&screen)
                         );
                     }
                 }
                 None => {
                     println!(
                         "\t{}: {}",
-                        paint(&account.name),
-                        paint("no valid session").with(Color::Red)
+                        &account.name,
+                        style("no valid session")
+                            .with(Color::Red)
+                            .into_displayable(&screen)
                     );
                 }
             };
         }
 
-        println!("\n\t{}", paint("ARNs"));
+        println!("\n\tARNs");
         for account in &group.accounts {
-            println!("\t{}: {}", paint(&account.name), account.arn,);
+            println!("\t{}: {}", &account.name, account.arn,);
         }
         println!("");
     }
 }
 
 fn delete(name: &str) {
+    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     if !cfg.groups.contains_key(name) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
-            paint(name).with(Color::Yellow),
-            paint("The specified group does not exist").with(Color::Red)
+            style(name).with(Color::Yellow).into_displayable(&screen),
+            style("The specified group does not exist")
+                .with(Color::Red)
+                .into_displayable(&screen)
         );
         return;
     }
@@ -182,11 +235,12 @@ fn delete(name: &str) {
     cfg.save().unwrap();
     println!(
         "\nSuccessfully deleted group {}.\n",
-        paint(name).with(Color::Yellow)
+        style(name).with(Color::Yellow).into_displayable(&screen)
     );
 }
 
 fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool) {
+    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -226,7 +280,10 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
             },
         );
     }
-    println!("\n{}:", paint(name).with(Color::Yellow));
+    println!(
+        "\n{}:",
+        style(name).with(Color::Yellow).into_displayable(&screen)
+    );
 
     for account in &cfg.groups.get(name).unwrap().accounts {
         println!("\t{}: {}", account.name, account.arn,);

@@ -23,10 +23,12 @@ RUN apt-get install -y --no-install-recommends \
     zlib1g-dev && \
     bash /openssl.sh linux-x86_64
 
-ENV OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib
+ENV OPENSSL_DIR=/etc/ssl \
+    OPENSSL_INCLUDE_DIR=/etc/ssl/include \
+    OPENSSL_LIB_DIR=/etc/ssl/lib \
+    SSL_CERT_DIR=/etc/ssl/certs
 
 # original file end, custom instructions
 
 RUN apt-get update && apt-get install -y libgmp3-dev libdbus-1-3 libdbus-1-dev
+RUN update-ca-certificates

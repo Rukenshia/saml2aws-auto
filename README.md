@@ -5,6 +5,10 @@ at the same time. Accounts are organised in groups, which can be refreshed using
 
 ## Installation
 
+```bash
+brew install rukenshia/repo/saml2aws-auto
+```
+
 The [GitHub Releases](https://github.com/Rukenshia/saml2aws-auto/releases) page includes archives for all major platforms.
 Download the release for your platform and make sure `saml2aws-auto` is in your PATH variable.
 
@@ -32,7 +36,17 @@ Currently, only Keycloak is supported as Identity Provider. When setting the
 IDP URL, please note that you will have to pass the exact path to the saml client of Keycloak.
 ```
 
-You will be asked a few questions:
+Let's break the command down into a few pieces:
+
+* `saml2aws-auto groups add` tells the CLI to add a new group.
+* `my-accounts` tells the CLI what name you want to use for the group. This can be anything.
+* `--prefix my-accounts` tells it that all the accounts you want to target start with `my-accounts`.
+  In our example, we have two accounts: `my-accounts-staging` and `my-accounts-prod`. That means that the prefix will capture both of these accounts. If you also have `my-other-accounts-staging` and `my-other-accounts-prod` but want all four accounts in the same group, you can use the prefix `my-`.
+* `--role Administrator` identifies which role to use for all accounts.
+
+If you want to add new accounts to an existing group later, you can use the `--append` flag. Also if you want to target specific accounts, you can pass in `--accounts [account names,]`. Use `saml2aws-auto groups add --help` for more info.
+
+Next, You will be asked a few questions:
 
 ```
 ? IDP URL [localhost]: https://my.idp/realms/myrealm/protocol/saml/clients/aws
@@ -74,6 +88,18 @@ Example:
         aws --profile my-accounts-staging s3 ls
 ```
 
+## Changing Password / Username / Other Configuration
+
+You can use `saml2aws-auto configure` to reconfigure your details.
+
 ## Usage
 
-You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands. If you prefer reading the docs in traditional manpages you can just run `man docs/saml2aws-auto.1`.
+You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
+
+If you prefer reading the docs in traditional manpages, you can just run `man docs/saml2aws-auto.1` instead.
+
+## Troubleshooting
+
+Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--password` flag with the `groups add`
+and `refresh` commands to circumvent this.
+

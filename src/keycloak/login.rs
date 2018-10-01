@@ -16,25 +16,35 @@ pub fn get_assertion_response(
     token: &str,
     do_aws_page_request: bool,
 ) -> Result<(String, Option<String>), KeycloakError> {
+    trace!("get_assertion_response.start");
     let client = reqwest::Client::new();
     let mut doc = get_login_page(&client, cookie_jar, url)?;
     let form = get_login_form(&doc);
 
     if let Ok(form) = form {
+        trace!("get_assertion_response.do_login_flow");
         doc = do_login_flow(&client, cookie_jar, &form.action, username, password, token)?;
+    } else {
+        trace!("get_assertion_response.skip_login_flow");
     }
 
+    trace!("get_assertion_response.get_intermediate_response");
     let (saml_response, aws_form) = get_intermediate_response(&doc)?;
 
     let aws_web = match do_aws_page_request {
-        true => Some(submit_saml_response_form(
-            &client,
-            cookie_jar,
-            &aws_form.action,
-            &saml_response,
-        )?),
+        true => {
+            trace!("get_assertion_response.submit_saml_response_form");
+            Some(submit_saml_response_form(
+                &client,
+                cookie_jar,
+                &aws_form.action,
+                &saml_response,
+            )?)
+        }
         false => None,
     };
+
+    trace!("get_assertion_response.ok");
 
     Ok((saml_response, aws_web))
 }
@@ -47,13 +57,18 @@ fn do_login_flow(
     password: &str,
     token: &str,
 ) -> Result<String, KeycloakError> {
+    trace!("do_login_flow.start");
     // Submit User+Pass
     let params = [("username", username), ("password", password)];
+
+    trace!("do_login_flow.submit_form");
     let doc = submit_form(&client, cookie_jar, login_url, &params)?;
+    trace!("do_login_flow.get_totp_form");
     let totp = get_totp_form(&doc)?;
 
     // Submit TOTP
     let params = [("totp", token)];
+    trace!("do_login_flow.submit_form_totp");
     let doc = submit_form(&client, cookie_jar, &totp.action, &params)?;
 
     Ok(doc)
@@ -98,6 +113,8 @@ pub fn submit_form(
             KeycloakErrorKind::InvalidCredentials,
             "Invalid username or password",
         ));
+    } else if body.contains("Update password") {
+        return Err(KeycloakError::new(KeycloakErrorKind::PasswordUpdateRequired, "You need to update your password in Keycloak before you can login. Please visit the website to change your password."));
     }
 
     Ok(body)
@@ -108,6 +125,7 @@ pub fn get_login_page(
     cookie_jar: &mut CookieJar,
     url: &str,
 ) -> Result<String, KeycloakError> {
+    trace!("get_login_page.start");
     let mut cookie = reqwest::header::Cookie::new();
     {
         cookie_jar.iter().for_each(|cookie_from_jar| {
@@ -118,42 +136,56 @@ pub fn get_login_page(
         });
     }
 
-    let mut res = client
-        .get(url)
-        .header(cookie)
-        .send()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+    trace!("get_login_page.send");
+    let mut res = client.get(url).header(cookie).send().map_err(|e| {
+        trace!("get_login_page.map_err");
+        error!("get_login_page: {:?}", e);
+
+        KeycloakError::new(KeycloakErrorKind::Http, e.description())
+    })?;
 
     // Then we add cookies in the jar given the response
+    trace!("get_login_page.cookies");
     if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
         raw_cookies.iter().for_each(|raw_cookie| {
+            trace!("get_login_page.cookies.iter({})", raw_cookie);
             let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
             cookie_jar.add(cookie)
         })
     }
 
-    Ok(res.text()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
+    Ok(res.text().map_err(|e| {
+        trace!("get_login_page.end.map_err");
+        error!("get_login_page: {:?}", e);
+        KeycloakError::new(KeycloakErrorKind::Io, e.description())
+    })?)
 }
 
 pub fn get_login_form(document: &str) -> Result<FormInfo, KeycloakError> {
+    trace!("get_login_form.start");
     let doc = Html::parse_document(document);
 
     let form = match FormInfo::from_html(&doc, "form#form-login") {
         Some(f) => f,
         None => {
+            trace!("get_login_page.no_form");
+            debug!("{}", document);
             return Err(KeycloakError::new(
                 KeycloakErrorKind::FormNotFound,
                 "Could not find login form",
-            ))
+            ));
         }
     };
 
+    trace!("get_login_form.ok");
     Ok(form)
 }
 
 pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), KeycloakError> {
+    trace!("get_intermediate_response.start");
+
     if document.contains("Invalid authenticator code") {
+        trace!("get_intermediate_response.invalid_code");
         return Err(KeycloakError::new(
             KeycloakErrorKind::InvalidToken,
             "Invalid MFA token",
@@ -165,23 +197,28 @@ pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), K
     let form = match FormInfo::from_html(&doc, "form") {
         Some(f) => f,
         None => {
+            trace!("get_intermediate_response.no_form");
+            debug!("{}", document);
             return Err(KeycloakError::new(
                 KeycloakErrorKind::FormNotFound,
                 "Could not find saml submit form",
-            ))
+            ));
         }
     };
 
+    trace!("get_intermediate_response.extract_saml_response");
     let saml_response = match extract_saml_response(&doc) {
         Some(r) => r,
         None => {
+            trace!("get_intermediate_response.no_response");
             return Err(KeycloakError::new(
                 KeycloakErrorKind::Io,
                 "Could not find saml response",
-            ))
+            ));
         }
     };
 
+    trace!("get_intermediate_response.ok");
     Ok((saml_response, form))
 }
 
