@@ -6,6 +6,8 @@ main() {
     local src=$(pwd) \
           stage=
 
+    local docs='./docs'
+
     case $TRAVIS_OS_NAME in
         linux)
             stage=$(mktemp -d)
@@ -22,6 +24,7 @@ main() {
     fname=target/$TARGET/release/saml2aws-auto
     test -f target/$TARGET/release/saml2aws-auto || fname=target/$TARGET/release/saml2aws-auto.exe
     cp $fname $stage/
+    cp -r $docs $stage/
 
     cd $stage
     tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *
