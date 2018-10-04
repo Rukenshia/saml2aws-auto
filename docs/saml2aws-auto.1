@@ -46,6 +46,7 @@ has the following options:
 
           --accounts <accounts>
             Names of AWS accounts to add to the new group.
+            You may either specify this or --prefix, not both.
 
           --mfa <mfa>
             MFA token to authenticate.
@@ -59,6 +60,7 @@ has the following options:
           --prefix <prefix>
             Used to filter through accounts.
             Specify <prefix> to only add accounts that match.
+            You may either specify this or --accounts, not both.
 
           --role <role>
             Name of the role to configure (e.g. Administrator)
@@ -92,12 +94,12 @@ subcommand.
 saml2aws-auto configure
     Interactively setup Identity Provider
 
-saml2aws-auto groups add mygroup --role Administrator --prefix "production-"
+saml2aws-auto groups add my-accounts --role Administrator --prefix "my-accounts-"
     Add a new group called 'mygroup' for the Administrator role.
-    Only match accounts starting with 'production-'
+    Only match accounts starting with 'my-accounts-'
 
-saml2aws-auto refresh mygroup
-    Refresh a group called 'mygroup'
+saml2aws-auto refresh my-accounts
+    Refresh a group called 'my-accounts'
 
 .SH AUTHOR
 Jan Christophersen <jan@ruken.pw>
