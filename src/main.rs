@@ -23,6 +23,7 @@ extern crate rpassword;
 extern crate scraper;
 
 mod aws;
+mod client;
 mod config;
 mod groups;
 mod keycloak;
