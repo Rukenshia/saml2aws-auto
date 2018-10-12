@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use client;
 use reqwest;
 
 #[derive(Deserialize)]
@@ -16,7 +17,7 @@ pub enum VersionComparison {
 }
 
 fn get_latest_version() -> Result<VersionInfo, reqwest::Error> {
-    reqwest::Client::builder()
+    client::get_proxied_client_builder()
         .timeout(Duration::from_millis(400))
         .build()?
         .get("https://api.github.com/repos/Rukenshia/saml2aws-auto/releases/latest")

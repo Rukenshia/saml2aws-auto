@@ -7,6 +7,7 @@ use super::scraper::Html;
 use super::form::{extract_saml_response, FormInfo};
 use super::mfa::get_totp_form;
 use super::{KeycloakError, KeycloakErrorKind};
+use client;
 
 pub fn get_assertion_response(
     cookie_jar: &mut CookieJar,
@@ -17,7 +18,7 @@ pub fn get_assertion_response(
     do_aws_page_request: bool,
 ) -> Result<(String, Option<String>), KeycloakError> {
     trace!("get_assertion_response.start");
-    let client = reqwest::Client::new();
+    let client = client::get_proxied_client_builder().build().unwrap();
     let mut doc = get_login_page(&client, cookie_jar, url)?;
     let form = get_login_form(&doc);
 
