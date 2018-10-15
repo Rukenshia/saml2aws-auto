@@ -21,6 +21,7 @@ extern crate openssl_probe;
 extern crate reqwest;
 extern crate rpassword;
 extern crate scraper;
+extern crate url;
 
 mod aws;
 mod client;
