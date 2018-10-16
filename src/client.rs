@@ -32,6 +32,11 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
             username: url.username().to_owned(),
             password: Some(url.password().unwrap().to_owned()),
         }));
+
+        trace!(
+            "http_proxy.default_headers!overwritable='{}'",
+            headers.get::<header::ProxyAuthorization<Basic>>().unwrap()
+        );
         cb.default_headers(headers);
         cb.proxy(proxy);
     }
@@ -64,6 +69,11 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
             username: url.username().to_owned(),
             password: Some(url.password().unwrap().to_owned()),
         }));
+
+        trace!(
+            "https_proxy.default_headers='{}'",
+            headers.get::<header::ProxyAuthorization<Basic>>().unwrap()
+        );
         cb.default_headers(headers);
         cb.proxy(proxy);
     }
