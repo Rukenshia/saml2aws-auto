@@ -211,16 +211,23 @@ pub fn interactive_create(default: Config) {
                         Some(p)
                     }
                 }
-                Err(_) => {
-                    Some("")
-                }
+                Err(_) => Some(""),
             },
         ) {
+            trace!("interactive_create.set_password");
+            trace!("interactive_create.password={}", password);
+
             cfg.password = password.into();
-            set_password(
+            match set_password(
                 &cfg.username.as_ref().unwrap(),
                 &cfg.password.as_ref().unwrap(),
-            ).expect("Could not save password in credentials storage");
+            ) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("error saving password: {:?}", e);
+                    println!("Could not save password");
+                }
+            };
         }
     }
 
