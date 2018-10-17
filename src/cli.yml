@@ -16,7 +16,7 @@ subcommands:
     about: Configure saml2aws-auto settings like your IDP
 - refresh:
     about: Refreshes all credentials for a group
-    args:
+    args: &refresh_args
     - username:
         long: username
         help: IDP Username
@@ -42,6 +42,9 @@ subcommands:
     settings:
     - SubcommandRequiredElseHelp 
     subcommands:
+    - refresh:
+        about: Alias for saml2aws-auto refresh
+        args: *refresh_args
     - list:
         about: Lists all configured groups
     - delete:
