@@ -1,0 +1,107 @@
+.TH saml2aws-auto 1 "01 Oct 2018" "version 1.0"
+
+.SH NAME
+saml2aws-auto - A simple to use management tool for multiple AWS account credentials when using Keycloak as Identity Provider
+.SH SYNOPSIS
+saml2aws-auto [-hvV] <SUBCOMMAND>
+.SH DESCRIPTION
+The following
+.B flags
+are available:
+
+.B  -h, --help
+    Display a help text.
+
+.B  -V, --version
+    Display version information.
+
+.B  -v
+    Enable more verbose output (Denoted with 'DEBU' in output).
+
+
+The following
+.B subcommands
+are available:
+
+.B  configure
+    Interactively configure Identity Provider endpoint and user login credentials.
+
+.B  refresh
+    Renew downloaded STS credentials by reauthenticating with IDP.
+
+.B  groups
+    Add a logical group of AWS roles for federation.
+
+    The following
+.B subcommands
+are available:
+
+        groups
+.B add
+<name>
+          Adds a group with one or more roles as <name>.
+          This subcommand of
+.B groups
+has the following options:
+
+          --accounts <accounts>
+            Names of AWS accounts to add to the new group.
+            You may either specify this or --prefix, not both.
+
+          --mfa <mfa>
+            MFA token to authenticate.
+
+          --password <password>
+            Password to use for authentication.
+
+          --username <username>
+            Username to use for authentication.
+
+          --prefix <prefix>
+            Used to filter through accounts.
+            Specify <prefix> to only add accounts that match.
+            You may either specify this or --accounts, not both.
+
+          --role <role>
+            Name of the role to configure (e.g. Administrator)
+
+          --session-duration <session_duration>
+            The session duration when refreshing tokens.
+            Maximum is defined in the AWS Role.
+
+        groups
+.B delete
+          Deletes a group.
+
+        groups
+.B help
+          Print help text for the
+.B groups
+subcommand.
+        
+
+.B  help
+    Display help text ( see
+.B -h flag
+)
+
+.B  version
+    Display version information ( see
+.B -V flag
+)
+
+.SH EXAMPLES
+saml2aws-auto configure
+    Interactively setup Identity Provider
+
+saml2aws-auto groups add my-accounts --role Administrator --prefix "my-accounts-"
+    Add a new group called 'mygroup' for the Administrator role.
+    Only match accounts starting with 'my-accounts-'
+
+saml2aws-auto refresh my-accounts
+    Refresh a group called 'my-accounts'
+
+.SH AUTHOR
+Jan Christophersen <jan@ruken.pw>
+
+Built with <3 on github <https://github.com/Rukenshia/saml2aws-auto>
