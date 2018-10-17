@@ -4,6 +4,7 @@ use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
 use config::{prompt, Account, Group};
 use keycloak::login::get_assertion_response;
+use refresh;
 
 use chrono::prelude::*;
 use clap::ArgMatches;
@@ -20,6 +21,8 @@ pub fn command(matches: &ArgMatches) {
         let name = matches.value_of("GROUP").unwrap();
 
         delete(name)
+    } else if let Some(matches) = matches.subcommand_matches("refresh") {
+        refresh::command(matches);
     } else if let Some(matches) = matches.subcommand_matches("add") {
         let cfg = config::load_or_default().unwrap();
 
