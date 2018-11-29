@@ -18,6 +18,10 @@ If you have rust installed, you can use the following command
 cargo install saml2aws-auto
 ```
 
+### Linux
+
+If you are on Linux, you will need to set up a secret tool before running saml2aws-auto. You can find more information in the troubleshooting section.
+
 ## Features
 
 * Retrieving AWS Credentials when authenticating via SAML (only Keycloak supported at the moment, MFA is mandatory)
@@ -100,6 +104,11 @@ If you prefer reading the docs in traditional manpages, you can just run `man do
 
 ## Troubleshooting
 
+## My password can't be stored
+
 Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--password` flag with the `groups add`
 and `refresh` commands to circumvent this.
 
+## `The name org.freedesktop.secrets was not provided by any .service files (org.freedesktop.DBus.Error.ServiceUnknown)))`
+
+This is an error specific to linux and tells you that you currently don't have any secret manager implementing the Freedesktop Secret Service set up. Usually, a keyring app such as GNOME-Keyring or another tool is pre-installed. Open that up and configure your master password and the default vault for your secrets and retry running saml2aws-auto. [Another link to what apps provide this API](https://specifications.freedesktop.org/secret-service/)
