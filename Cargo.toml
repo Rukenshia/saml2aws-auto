@@ -16,7 +16,7 @@ serde-xml-rs = "0.2.1"
 crossterm = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = "0.8"
-scraper = "0.6"
+scraper = "0.9"
 cookie = "0.10"
 base64 = "~0.6.0"
 rust-ini = "0.12"
