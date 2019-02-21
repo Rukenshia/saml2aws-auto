@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::io;
 
 use clap::ArgMatches;
 use crossterm::{style, Color};
