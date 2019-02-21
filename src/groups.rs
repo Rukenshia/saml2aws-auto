@@ -9,11 +9,9 @@ use refresh;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::style::{style, Color};
-use crossterm::Screen;
+use crossterm::{style, Color};
 
 pub fn command(matches: &ArgMatches) {
-    let screen = Screen::default();
 
     if let Some(_) = matches.subcommand_matches("list") {
         list()
@@ -56,10 +54,9 @@ pub fn command(matches: &ArgMatches) {
         if prefix.is_none() && account_names.is_none() {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
-                style(name).with(Color::Yellow).into_displayable(&screen),
+                style(name).with(Color::Yellow),
                 style("Must specify either --prefix or --accounts flag")
                     .with(Color::Red)
-                    .into_displayable(&screen)
             );
             return;
         }
@@ -84,13 +81,12 @@ pub fn command(matches: &ArgMatches) {
                 error!("{:?}", e);
                 println!(
                     "{}",
-                    style("FAIL").with(Color::Red).into_displayable(&screen)
+                    style("FAIL").with(Color::Red)
                 );
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
                     style(e.description())
                         .with(Color::Red)
-                        .into_displayable(&screen)
                 );
                 return;
             }
@@ -104,13 +100,12 @@ pub fn command(matches: &ArgMatches) {
                 error!("{:?}", e);
                 println!(
                     "{}",
-                    style("FAIL").with(Color::Red).into_displayable(&screen)
+                    style("FAIL").with(Color::Red)
                 );
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
                     style(e.description())
                         .with(Color::Red)
-                        .into_displayable(&screen)
                 );
                 return;
             }
@@ -129,7 +124,6 @@ pub fn command(matches: &ArgMatches) {
                 "\t{}",
                 style("WARNING")
                     .with(Color::Yellow)
-                    .into_displayable(&screen)
             );
             println!("\nNo accounts were found with the given parameters. Possible errors:");
             println!("\t- Wrong prefix/accounts used");
@@ -139,7 +133,6 @@ pub fn command(matches: &ArgMatches) {
                 "\t{}",
                 style("SUCCESS")
                     .with(Color::Green)
-                    .into_displayable(&screen)
             );
             add(name, session_duration, accounts, append)
         }
@@ -147,13 +140,12 @@ pub fn command(matches: &ArgMatches) {
 }
 
 fn list() {
-    let screen = Screen::default();
     let cfg = config::load_or_default().unwrap();
 
     for (name, group) in &cfg.groups {
         println!(
             "\n{}:",
-            style(name).with(Color::Yellow).into_displayable(&screen)
+            style(name).with(Color::Yellow)
         );
 
         if let Some(duration) = group.session_duration {
@@ -162,7 +154,6 @@ fn list() {
                 "Session Duration",
                 style(&format!("{} seconds", duration))
                     .with(Color::Blue)
-                    .into_displayable(&screen)
             );
         } else {
             println!(
@@ -170,7 +161,6 @@ fn list() {
                 "Session Duration",
                 style("implicit")
                     .with(Color::Blue)
-                    .into_displayable(&screen)
             );
         }
 
@@ -187,7 +177,6 @@ fn list() {
                             &account.name,
                             style("no valid session")
                                 .with(Color::Red)
-                                .into_displayable(&screen)
                         );
                     } else {
                         println!(
@@ -195,7 +184,6 @@ fn list() {
                             &account.name,
                             style(&format!("{} minutes left", expiration.num_minutes()))
                                 .with(Color::Green)
-                                .into_displayable(&screen)
                         );
                     }
                 }
@@ -205,7 +193,6 @@ fn list() {
                         &account.name,
                         style("no valid session")
                             .with(Color::Red)
-                            .into_displayable(&screen)
                     );
                 }
             };
@@ -220,16 +207,14 @@ fn list() {
 }
 
 fn delete(name: &str) {
-    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     if !cfg.groups.contains_key(name) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
-            style(name).with(Color::Yellow).into_displayable(&screen),
+            style(name).with(Color::Yellow),
             style("The specified group does not exist")
                 .with(Color::Red)
-                .into_displayable(&screen)
         );
         return;
     }
@@ -238,12 +223,11 @@ fn delete(name: &str) {
     cfg.save().unwrap();
     println!(
         "\nSuccessfully deleted group {}.\n",
-        style(name).with(Color::Yellow).into_displayable(&screen)
+        style(name).with(Color::Yellow)
     );
 }
 
 fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool) {
-    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -285,7 +269,7 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
     }
     println!(
         "\n{}:",
-        style(name).with(Color::Yellow).into_displayable(&screen)
+        style(name).with(Color::Yellow)
     );
 
     for account in &cfg.groups.get(name).unwrap().accounts {

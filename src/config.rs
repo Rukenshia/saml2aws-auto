@@ -8,8 +8,7 @@ use std::path::Path;
 
 use chrono::prelude::*;
 
-use crossterm::style::{style, Color};
-use crossterm::Screen;
+use crossterm::{style, Color};
 use dirs;
 use keyring::{Keyring, KeyringError};
 use rpassword;
@@ -101,18 +100,18 @@ pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> 
     Keyring::new("saml2aws-auto", username).set_password(password)
 }
 
-pub fn ask_question(screen: &Screen, question: &str, default: Option<&str>) {
+pub fn ask_question(question: &str, default: Option<&str>) {
     if let Some(default) = default {
         print!(
             "{} {}",
-            style("?").with(Color::Green).into_displayable(&screen),
-            style(&format!("{} [{}]: ", question, default)).into_displayable(&screen),
+            style("?").with(Color::Green),
+            style(&format!("{} [{}]: ", question, default)),
         );
     } else {
         print!(
             "{} {}",
-            style("?").with(Color::Green).into_displayable(&screen),
-            style(format!("{}: ", question)).into_displayable(&screen),
+            style("?").with(Color::Green),
+            style(format!("{}: ", question)),
         );
     }
 }
@@ -133,8 +132,7 @@ pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> 
         None => None,
     };
 
-    let screen = Screen::default();
-    ask_question(&screen, question, masked.as_ref().map(|s| s.as_str()));
+    ask_question(question, masked.as_ref().map(|s| s.as_str()));
 
     let password = match rpassword::read_password() {
         Ok(p) => p,
@@ -155,10 +153,9 @@ pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> 
 }
 
 pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
-    let screen = Screen::default();
     let mut buf = String::new();
 
-    ask_question(&screen, question, default);
+    ask_question(question, default);
 
     if let Err(_) = io::stdin().read_line(&mut buf) {
         println!("Could not read line");
@@ -176,15 +173,13 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
 }
 
 pub fn interactive_create(default: Config) {
-    let screen = Screen::default();
-
     println!("\nWelcome to saml2aws-auto. Let's configure a few things to get started.");
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
         style("the exact path to the saml client")
             .with(Color::Yellow)
-            .into_displayable(&screen)
+            
     );
 
     let mut cfg = default;
@@ -236,13 +231,11 @@ pub fn interactive_create(default: Config) {
         "\nAll set!\nIf you need to reconfigure your details, use {}",
         style("saml2aws-auto configure")
             .with(Color::Yellow)
-            .into_displayable(&screen)
+            
     );
 }
 
 pub fn check_or_interactive_create() -> bool {
-    let screen = Screen::default();
-
     if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
         let cfg = match load_or_default() {
             Ok(c) => c,
@@ -251,7 +244,7 @@ pub fn check_or_interactive_create() -> bool {
                     "{}: {}",
                     style("Could not load the saml2aws-auto config file")
                         .with(Color::Red)
-                        .into_displayable(&screen),
+                        ,
                     e
                 );
                 println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
@@ -270,7 +263,7 @@ pub fn check_or_interactive_create() -> bool {
                 }
             }) {
                 println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
-                         style("WARNING").with(Color::Yellow).into_displayable(&screen));
+                         style("WARNING").with(Color::Yellow));
                 return false;
             };
         }

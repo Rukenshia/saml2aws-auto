@@ -6,7 +6,7 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
     let mut cb = ClientBuilder::new();
 
     trace!("get_proxied_client_builder.http_proxy.before_check");
-    if let Ok(http_proxy) = env::var("http_proxy") {
+    if let Ok(http_proxy) = env::var("s2a_http_proxy") {
         trace!("get_proxied_client_builder.http_proxy.before_unwrap");
         let url = Url::parse(&http_proxy).expect("Could not parse http_proxy environment variable");
 
@@ -42,7 +42,7 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
     }
 
     trace!("get_proxied_client_builder.https_proxy.before_check");
-    if let Ok(https_proxy) = env::var("https_proxy") {
+    if let Ok(https_proxy) = env::var("s2a_https_proxy") {
         trace!("get_proxied_client_builder.https_proxy.before_unwrap");
         let url =
             Url::parse(&https_proxy).expect("Could not parse https_proxy environment variable");

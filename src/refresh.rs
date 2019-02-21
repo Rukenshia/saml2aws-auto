@@ -2,8 +2,7 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::style::{style, Color};
-use crossterm::Screen;
+use crossterm::{style, Color};
 
 use chrono::prelude::*;
 use std::collections::HashMap;
@@ -23,7 +22,6 @@ use config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(matches: &ArgMatches) {
-    let screen = Screen::default();
     let mut cfg = config::load_or_default().unwrap();
 
     let group_name = matches.value_of("GROUP").unwrap();
@@ -45,10 +43,10 @@ pub fn command(matches: &ArgMatches) {
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
                     style(group_name)
                         .with(Color::Yellow)
-                        .into_displayable(&screen),
+                        ,
                     style("The specified group does not exist.")
                         .with(Color::Red)
-                        .into_displayable(&screen)
+                        
                 );
                 return;
             }
@@ -61,7 +59,7 @@ pub fn command(matches: &ArgMatches) {
                 "Nothing to refresh. Group {} is empty.",
                 style(group_name)
                     .with(Color::Yellow)
-                    .into_displayable(&screen)
+                    
             );
             return;
         }
@@ -99,7 +97,7 @@ pub fn command(matches: &ArgMatches) {
                 Err(e) => {
                     println!(
                         "Initial login {}",
-                        style("FAIL").with(Color::Red).into_displayable(&screen)
+                        style("FAIL").with(Color::Red)
                     );
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
@@ -108,10 +106,10 @@ pub fn command(matches: &ArgMatches) {
                     {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
-                            style("!").with(Color::Red).into_displayable(&screen),
+                            style("!").with(Color::Red),
                             style(e.description())
                                 .with(Color::Red)
-                                .into_displayable(&screen)
+                                
                         );
                     }
 
@@ -122,7 +120,7 @@ pub fn command(matches: &ArgMatches) {
                 "Initial login {}",
                 style("SUCCESS")
                     .with(Color::Green)
-                    .into_displayable(&screen)
+                    
             );
         }
 
@@ -181,7 +179,7 @@ pub fn command(matches: &ArgMatches) {
                             "\t{}",
                             style(e.description())
                                 .with(Color::Red)
-                                .into_displayable(&screen)
+                                
                         );
                     }
                 },
@@ -190,7 +188,7 @@ pub fn command(matches: &ArgMatches) {
                         "\t{}",
                         style(e.downcast_ref::<Box<Error>>().unwrap().description())
                             .with(Color::Red)
-                            .into_displayable(&screen)
+                            
                     );
                 }
             };
@@ -206,12 +204,12 @@ pub fn command(matches: &ArgMatches) {
             account.valid_until = *accounts.get(&account.arn).unwrap();
         }
 
-        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", style(group_name).with(Color::Yellow).into_displayable(&screen));
+        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", style(group_name).with(Color::Yellow));
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
             style(&group.accounts[0].name)
                 .with(Color::Yellow)
-                .into_displayable(&screen)
+                
         );
     }
 
@@ -234,8 +232,6 @@ fn refresh_account(
     mfa: &str,
     force: bool,
 ) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
-    let screen = Screen::default();
-
     if account.session_valid() && !force {
         debug!("refresh_account.session_still_valid");
 
@@ -246,10 +242,10 @@ fn refresh_account(
             "Refreshing {}\t{}",
             style(&account.name)
                 .with(Color::Yellow)
-                .into_displayable(&screen),
+                ,
             style(&format!("valid for {} minutes", expiration.num_minutes()))
                 .with(Color::Green)
-                .into_displayable(&screen)
+                
         );
         return Ok((
             RefreshAccountOutput {
@@ -276,7 +272,7 @@ fn refresh_account(
             println!(
                 "{} {}",
                 account.name,
-                style("FAIL").with(Color::Red).into_displayable(&screen)
+                style("FAIL").with(Color::Red)
             );
 
             if e.kind == KeycloakErrorKind::InvalidCredentials
@@ -285,10 +281,10 @@ fn refresh_account(
             {
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
-                    style("!").with(Color::Red).into_displayable(&screen),
+                    style("!").with(Color::Red),
                     style(e.description())
                         .with(Color::Red)
-                        .into_displayable(&screen)
+                        
                 );
             }
 
@@ -336,7 +332,7 @@ fn refresh_account(
                 account.name,
                 style("SUCCESS")
                     .with(Color::Green)
-                    .into_displayable(&screen)
+                    
             );
 
             trace!("refresh_account.after_assume_role.ok");
@@ -358,7 +354,7 @@ fn refresh_account(
             println!(
                 "{} {}",
                 account.name,
-                style("FAIL").with(Color::Red).into_displayable(&screen)
+                style("FAIL").with(Color::Red)
             );
             return Err(Box::new(e));
         }

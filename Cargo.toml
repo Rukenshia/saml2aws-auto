@@ -1,6 +1,6 @@
 [package]
 name = "saml2aws-auto"
-version = "1.7.1"
+version = "1.7.2"
 description = "A simple management tool for AWS credentials when using Keycloak with SAML"
 license-file = "LICENSE"
 authors = ["Jan Christopehrsen <jan@ruken.pw>"]
@@ -13,7 +13,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.7"
 serde-xml-rs = "0.2.1"
-crossterm = "0.4"
+crossterm = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = "0.8"
 scraper = "0.9"
