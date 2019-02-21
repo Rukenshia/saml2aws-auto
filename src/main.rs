@@ -36,7 +36,6 @@ use std::io;
 
 use clap::App;
 use crossterm::style::{style, Color};
-use crossterm::Screen;
 use log::LevelFilter;
 
 fn main() {
@@ -76,13 +75,11 @@ fn main() {
     if let Ok(update::VersionComparison::IsDifferent) =
         update::compare_version(yaml["version"].as_str().unwrap())
     {
-        let screen = Screen::default();
 
         println!(
             "\n\t{}",
             style("A new version of saml2aws-auto is available")
                 .with(Color::Green)
-                .into_displayable(&screen)
         );
         println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
         println!("");

@@ -13,7 +13,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.7"
 serde-xml-rs = "0.2.1"
-crossterm = "0.4"
+crossterm = "0.5"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = "0.8"
 scraper = "0.9"
