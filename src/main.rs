@@ -35,7 +35,7 @@ mod update;
 use std::io;
 
 use clap::App;
-use crossterm::style::{style, Color};
+use crossterm::{style, Color};
 use log::LevelFilter;
 
 fn main() {

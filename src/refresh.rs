@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 
 use clap::ArgMatches;
-use crossterm::style::{style, Color};
+use crossterm::{style, Color};
 
 use chrono::prelude::*;
 use std::collections::HashMap;

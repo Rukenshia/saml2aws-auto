@@ -9,7 +9,7 @@ use refresh;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::style::{style, Color};
+use crossterm::{style, Color};
 
 pub fn command(matches: &ArgMatches) {
 

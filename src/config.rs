@@ -8,7 +8,7 @@ use std::path::Path;
 
 use chrono::prelude::*;
 
-use crossterm::style::{style, Color};
+use crossterm::{style, Color};
 use dirs;
 use keyring::{Keyring, KeyringError};
 use rpassword;
