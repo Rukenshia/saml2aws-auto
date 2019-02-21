@@ -6,6 +6,7 @@ use crossterm::{style, Color};
 
 use chrono::prelude::*;
 use std::collections::HashMap;
+use std::fmt;
 use std::str::FromStr;
 use std::thread;
 
@@ -41,12 +42,8 @@ pub fn command(matches: &ArgMatches) {
 
                 println!(
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                    style(group_name)
-                        .with(Color::Yellow)
-                        ,
-                    style("The specified group does not exist.")
-                        .with(Color::Red)
-                        
+                    style(group_name).with(Color::Yellow),
+                    style("The specified group does not exist.").with(Color::Red)
                 );
                 return;
             }
@@ -57,9 +54,7 @@ pub fn command(matches: &ArgMatches) {
 
             println!(
                 "Nothing to refresh. Group {} is empty.",
-                style(group_name)
-                    .with(Color::Yellow)
-                    
+                style(group_name).with(Color::Yellow)
             );
             return;
         }
@@ -95,10 +90,7 @@ pub fn command(matches: &ArgMatches) {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!(
-                        "Initial login {}",
-                        style("FAIL").with(Color::Red)
-                    );
+                    println!("Initial login {}", style("FAIL").with(Color::Red));
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
@@ -107,27 +99,20 @@ pub fn command(matches: &ArgMatches) {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
                             style("!").with(Color::Red),
-                            style(e.description())
-                                .with(Color::Red)
-                                
+                            style(e.description()).with(Color::Red)
                         );
                     }
 
                     return;
                 }
             };
-            println!(
-                "Initial login {}",
-                style("SUCCESS")
-                    .with(Color::Green)
-                    
-            );
+            println!("Initial login {}", style("SUCCESS").with(Color::Green));
         }
 
         trace!("refresh::command.looping_through_accounts");
 
         let mut threads: Vec<
-            thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>>>,
+            thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), RefreshError>>,
         > = vec![];
 
         for account in &group.accounts {
@@ -173,22 +158,43 @@ pub fn command(matches: &ArgMatches) {
                                 .set("expiration", credentials.expiration.as_str());
                         }
                         accounts.insert(output.account.arn, output.account.valid_until);
+
+                        if output.renewed {
+                            println!(
+                                "{}\t{}",
+                                output.account.name,
+                                style("SUCCESS").with(Color::Green)
+                            );
+                        } else {
+                            let now = Local::now();
+
+                            let expiration = output
+                                .account
+                                .valid_until
+                                .unwrap()
+                                .signed_duration_since(now);
+                            println!(
+                                "{}\t{}",
+                                output.account.name,
+                                style(&format!("valid for {} minutes", expiration.num_minutes()))
+                                    .with(Color::Green)
+                            );
+                        }
                     }
                     Err(e) => {
                         println!(
-                            "\t{}",
-                            style(e.description())
-                                .with(Color::Red)
-                                
+                            "{}\t{}",
+                            e.account_name,
+                            style(e.description()).with(Color::Red)
                         );
                     }
                 },
                 Err(e) => {
                     println!(
-                        "\t{}",
+                        "{} Multithreading error\t{}",
+                        style("!").with(Color::Red),
                         style(e.downcast_ref::<Box<Error>>().unwrap().description())
                             .with(Color::Red)
-                            
                     );
                 }
             };
@@ -207,9 +213,7 @@ pub fn command(matches: &ArgMatches) {
         println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", style(group_name).with(Color::Yellow));
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
-            style(&group.accounts[0].name)
-                .with(Color::Yellow)
-                
+            style(&group.accounts[0].name).with(Color::Yellow)
         );
     }
 
@@ -220,6 +224,39 @@ pub fn command(matches: &ArgMatches) {
 struct RefreshAccountOutput {
     pub account: config::Account,
     pub credentials: Option<Credentials>,
+    pub renewed: bool,
+}
+
+#[derive(Debug)]
+struct RefreshError {
+    pub account_name: String,
+    msg: String,
+}
+
+impl RefreshError {
+    pub fn new(account_name: &str, message: &str) -> Self {
+        RefreshError {
+            account_name: account_name.into(),
+            msg: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for RefreshError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "could not refresh account")
+    }
+}
+
+impl Error for RefreshError {
+    fn description(&self) -> &str {
+        &self.msg
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        // Generic error, underlying cause isn't tracked.
+        None
+    }
 }
 
 fn refresh_account(
@@ -231,26 +268,15 @@ fn refresh_account(
     password: &str,
     mfa: &str,
     force: bool,
-) -> Result<(RefreshAccountOutput, CookieJar), Box<Error + Send>> {
+) -> Result<(RefreshAccountOutput, CookieJar), RefreshError> {
     if account.session_valid() && !force {
         debug!("refresh_account.session_still_valid");
 
-        let now = Local::now();
-
-        let expiration = account.valid_until.unwrap().signed_duration_since(now);
-        println!(
-            "Refreshing {}\t{}",
-            style(&account.name)
-                .with(Color::Yellow)
-                ,
-            style(&format!("valid for {} minutes", expiration.num_minutes()))
-                .with(Color::Green)
-                
-        );
         return Ok((
             RefreshAccountOutput {
                 account: account.clone(),
                 credentials: None,
+                renewed: false,
             },
             cookie_jar,
         ));
@@ -269,11 +295,7 @@ fn refresh_account(
     ) {
         Ok(r) => r,
         Err(e) => {
-            println!(
-                "{} {}",
-                account.name,
-                style("FAIL").with(Color::Red)
-            );
+            println!("{} {}", account.name, style("FAIL").with(Color::Red));
 
             if e.kind == KeycloakErrorKind::InvalidCredentials
                 || e.kind == KeycloakErrorKind::InvalidToken
@@ -282,13 +304,11 @@ fn refresh_account(
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
                     style("!").with(Color::Red),
-                    style(e.description())
-                        .with(Color::Red)
-                        
+                    style(e.description()).with(Color::Red)
                 );
             }
 
-            return Err(Box::new(e));
+            return Err(RefreshError::new(&account.name, e.description()));
         }
     };
 
@@ -298,7 +318,7 @@ fn refresh_account(
         Ok(a) => a,
         Err(e) => {
             trace!("refresh_account.parse_assertion.err");
-            return Err(Box::new(e));
+            return Err(RefreshError::new(&account.name, e.description()));
         }
     };
 
@@ -311,10 +331,11 @@ fn refresh_account(
         Some(r) => r,
         None => {
             trace!("refresh_account.match_assertion.none");
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::NotFound,
+
+            return Err(RefreshError::new(
+                &account.name,
                 "Principal not found. Are you sure you have access to this account?",
-            )));
+            ));
         }
     };
 
@@ -327,14 +348,6 @@ fn refresh_account(
         session_duration.or(Some(assertion.session_duration)),
     ) {
         Ok(res) => {
-            println!(
-                "{} {}",
-                account.name,
-                style("SUCCESS")
-                    .with(Color::Green)
-                    
-            );
-
             trace!("refresh_account.after_assume_role.ok");
             debug!("Access Key ID: {}", res.access_key_id);
 
@@ -345,18 +358,14 @@ fn refresh_account(
                 RefreshAccountOutput {
                     account,
                     credentials: Some(res),
+                    renewed: true,
                 },
                 cookie_jar,
             ));
         }
         Err(e) => {
             trace!("refresh_account.after_assume_role.err");
-            println!(
-                "{} {}",
-                account.name,
-                style("FAIL").with(Color::Red)
-            );
-            return Err(Box::new(e));
+            return Err(RefreshError::new(&account.name, e.description()));
         }
     };
 }
