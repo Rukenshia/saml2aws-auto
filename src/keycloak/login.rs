@@ -81,32 +81,33 @@ pub fn submit_form(
     url: &str,
     params: &[(&str, &str)],
 ) -> Result<String, KeycloakError> {
-    let mut cookie = reqwest::header::Cookie::new();
-    {
-        cookie_jar.iter().for_each(|cookie_from_jar| {
-            cookie.set(
-                cookie_from_jar.name().to_string(),
-                cookie_from_jar.value().to_string(),
-            );
-        });
-    }
+    let cookie = cookie_jar
+        .iter()
+        .map(|cookie_from_jar| format!("{}={}", cookie_from_jar.name(), cookie_from_jar.value()))
+        .collect::<Vec<String>>()
+        .join("; ");
 
     let mut res = client
         .post(url)
         .form(&params)
-        .header(cookie)
+        .header("Cookie", cookie)
         .send()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
-    if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
-        raw_cookies.iter().for_each(|raw_cookie| {
-            let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
-            cookie_jar.add(cookie)
-        })
-    }
+    res.headers().iter().for_each(|(name, raw_cookies)| {
+        if name != "set-cookie" {
+            return;
+        }
 
-    let body = res.text()
+        trace!("submit_form.raw_cookies={}", raw_cookies.to_str().unwrap());
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+
+        cookie_jar.add(cookie);
+    });
+
+    let body = res
+        .text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     if body.contains("Invalid username or password") {
@@ -127,33 +128,41 @@ pub fn get_login_page(
     url: &str,
 ) -> Result<String, KeycloakError> {
     trace!("get_login_page.start");
-    let mut cookie = reqwest::header::Cookie::new();
-    {
-        cookie_jar.iter().for_each(|cookie_from_jar| {
-            cookie.set(
-                cookie_from_jar.name().to_string(),
-                cookie_from_jar.value().to_string(),
-            );
-        });
-    }
+    let cookie = cookie_jar
+        .iter()
+        .map(|cookie_from_jar| format!("{}={}", cookie_from_jar.name(), cookie_from_jar.value()))
+        .collect::<Vec<String>>()
+        .join("; ");
+
+    trace!("get_login_page.cookie={}", &cookie);
 
     trace!("get_login_page.send");
-    let mut res = client.get(url).header(cookie).send().map_err(|e| {
-        trace!("get_login_page.map_err");
-        error!("get_login_page: {:?}", e);
+    let mut res = client
+        .get(url)
+        .header("Cookie", cookie)
+        .send()
+        .map_err(|e| {
+            trace!("get_login_page.map_err");
+            error!("get_login_page: {:?}", e);
 
-        KeycloakError::new(KeycloakErrorKind::Http, e.description())
-    })?;
+            KeycloakError::new(KeycloakErrorKind::Http, e.description())
+        })?;
 
     // Then we add cookies in the jar given the response
     trace!("get_login_page.cookies");
-    if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
-        raw_cookies.iter().for_each(|raw_cookie| {
-            trace!("get_login_page.cookies.iter({})", raw_cookie);
-            let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
-            cookie_jar.add(cookie)
-        })
-    }
+    res.headers().iter().for_each(|(name, raw_cookies)| {
+        if name != "set-cookie" {
+            return;
+        }
+
+        trace!(
+            "get_login_page.raw_cookies={}",
+            raw_cookies.to_str().unwrap()
+        );
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+
+        cookie_jar.add(cookie);
+    });
 
     Ok(res.text().map_err(|e| {
         trace!("get_login_page.end.map_err");
@@ -231,31 +240,36 @@ pub fn submit_saml_response_form(
 ) -> Result<String, KeycloakError> {
     let params = [("SAMLResponse", response)];
 
-    let mut cookie = reqwest::header::Cookie::new();
-    {
-        cookie_jar.iter().for_each(|cookie_from_jar| {
-            cookie.set(
-                cookie_from_jar.name().to_string(),
-                cookie_from_jar.value().to_string(),
-            );
-        });
-    }
+    let cookie = cookie_jar
+        .iter()
+        .map(|cookie_from_jar| format!("{}={}", cookie_from_jar.name(), cookie_from_jar.value()))
+        .collect::<Vec<String>>()
+        .join("; ");
+    trace!("submit_saml_response_form.cookie={}", &cookie);
 
     let mut res = client
         .post(url)
         .form(&params)
-        .header(cookie)
+        .header("Cookie", cookie)
         .send()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
-    if let Some(raw_cookies) = res.headers().get::<reqwest::header::SetCookie>() {
-        raw_cookies.iter().for_each(|raw_cookie| {
-            let cookie = cookie::Cookie::parse(format!("{}", raw_cookie)).unwrap();
-            cookie_jar.add(cookie)
-        })
-    }
+    res.headers().iter().for_each(|(name, raw_cookies)| {
+        if name != "set-cookie" {
+            return;
+        }
 
-    Ok(res.text()
+        trace!(
+            "submit_saml_response_form.raw_cookies={}",
+            raw_cookies.to_str().unwrap()
+        );
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+
+        cookie_jar.add(cookie);
+    });
+
+    Ok(res
+        .text()
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
 }

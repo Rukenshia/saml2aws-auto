@@ -78,7 +78,7 @@ pub fn command(matches: &ArgMatches) {
 
         {
             // Do an initial login to fill our cookie jar
-
+            trace!("command.initial_login.before");
             match get_assertion_response(
                 &mut cookie_jar,
                 &cfg.idp_url,
@@ -105,10 +105,13 @@ pub fn command(matches: &ArgMatches) {
                     return;
                 }
             };
+            trace!("command.initial_login.success");
             println!("Initial login {}", style("SUCCESS").with(Color::Green));
         }
 
-        trace!("refresh::command.looping_through_accounts");
+        trace!("command.cookie_jar={:?}", cookie_jar);
+
+        trace!("command.looping_through_accounts");
 
         let mut threads: Vec<
             thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), RefreshError>>,
