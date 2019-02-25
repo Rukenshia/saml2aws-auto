@@ -1,5 +1,5 @@
 use aws::xml::{AssumeRoleResponse, AssumeRoleResult, Credentials};
-use reqwest::{Client, Response, StatusCode};
+use reqwest::{Client, Response};
 use serde_xml_rs;
 use std::error::Error;
 use std::io;
@@ -30,7 +30,7 @@ pub fn assume_role(
         }
     };
 
-    if res.status() != StatusCode::Ok {
+    if res.status() != 200 {
         println!("response: '{:?}'", res.text());
         return Err(io::Error::new(
             io::ErrorKind::Other,
