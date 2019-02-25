@@ -95,13 +95,13 @@ pub fn submit_form(
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
-    res.headers().iter().for_each(|(name, raw_cookies)| {
+    res.headers().iter().for_each(|(name, raw_cookie)| {
         if name != "set-cookie" {
             return;
         }
 
-        trace!("submit_form.raw_cookies={}", raw_cookies.to_str().unwrap());
-        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+        trace!("submit_form.raw_cookie={}", raw_cookie.to_str().unwrap());
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookie.to_str().unwrap())).unwrap();
 
         cookie_jar.add(cookie);
     });
@@ -150,16 +150,13 @@ pub fn get_login_page(
 
     // Then we add cookies in the jar given the response
     trace!("get_login_page.cookies");
-    res.headers().iter().for_each(|(name, raw_cookies)| {
+    res.headers().iter().for_each(|(name, raw_cookie)| {
         if name != "set-cookie" {
             return;
         }
 
-        trace!(
-            "get_login_page.raw_cookies={}",
-            raw_cookies.to_str().unwrap()
-        );
-        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+        trace!("get_login_page.raw_cookie={}", raw_cookie.to_str().unwrap());
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookie.to_str().unwrap())).unwrap();
 
         cookie_jar.add(cookie);
     });
@@ -255,16 +252,16 @@ pub fn submit_saml_response_form(
         .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
 
     // Then we add cookies in the jar given the response
-    res.headers().iter().for_each(|(name, raw_cookies)| {
+    res.headers().iter().for_each(|(name, raw_cookie)| {
         if name != "set-cookie" {
             return;
         }
 
         trace!(
-            "submit_saml_response_form.raw_cookies={}",
-            raw_cookies.to_str().unwrap()
+            "submit_saml_response_form.raw_cookie={}",
+            raw_cookie.to_str().unwrap()
         );
-        let cookie = cookie::Cookie::parse(format!("{}", raw_cookies.to_str().unwrap())).unwrap();
+        let cookie = cookie::Cookie::parse(format!("{}", raw_cookie.to_str().unwrap())).unwrap();
 
         cookie_jar.add(cookie);
     });
