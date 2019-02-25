@@ -1,5 +1,6 @@
+use super::client;
 use aws::xml::{AssumeRoleResponse, AssumeRoleResult, Credentials};
-use reqwest::{Client, Response};
+use reqwest::Response;
 use serde_xml_rs;
 use std::error::Error;
 use std::io;
@@ -10,7 +11,9 @@ pub fn assume_role(
     saml_assertion: &str,
     session_duration: Option<i64>,
 ) -> Result<Credentials, impl Error> {
-    let mut res: Response = match Client::new()
+    let mut res: Response = match client::get_proxied_client_builder()
+        .build()
+        .unwrap()
         .post("https://sts.amazonaws.com/")
         .query(&[("Version", "2011-06-15"), ("Action", "AssumeRoleWithSAML")])
         .form(&[

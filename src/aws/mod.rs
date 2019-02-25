@@ -1,5 +1,6 @@
 use std::io;
 
+use super::client;
 use super::dirs;
 use super::ini;
 use super::regex;

@@ -24,7 +24,7 @@ extern crate scraper;
 extern crate url;
 
 mod aws;
-mod client;
+pub mod client;
 mod config;
 mod groups;
 mod keycloak;
@@ -75,11 +75,9 @@ fn main() {
     if let Ok(update::VersionComparison::IsDifferent) =
         update::compare_version(yaml["version"].as_str().unwrap())
     {
-
         println!(
             "\n\t{}",
-            style("A new version of saml2aws-auto is available")
-                .with(Color::Green)
+            style("A new version of saml2aws-auto is available").with(Color::Green)
         );
         println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
         println!("");
