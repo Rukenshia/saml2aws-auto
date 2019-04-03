@@ -1,0 +1,34 @@
+# original file
+FROM ubuntu:14.04
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    cmake \
+    gcc \
+    libc6-dev \
+    make \
+    pkg-config
+
+COPY xargo.sh /
+RUN bash /xargo.sh
+
+COPY cmake.sh /
+RUN apt-get purge --auto-remove -y cmake && \
+    bash /cmake.sh 2.8.11
+
+COPY openssl.sh /
+RUN apt-get install -y --no-install-recommends \
+    g++ \
+    zlib1g-dev && \
+    bash /openssl.sh linux-x86_64
+
+ENV OPENSSL_DIR=/etc/ssl \
+    OPENSSL_INCLUDE_DIR=/etc/ssl/include \
+    OPENSSL_LIB_DIR=/etc/ssl/lib \
+    SSL_CERT_DIR=/etc/ssl/certs
+
+# original file end, custom instructions
+
+RUN apt-get update && apt-get install -y libgmp3-dev libdbus-1-3 libdbus-1-dev
+RUN update-ca-certificates
