@@ -115,6 +115,11 @@ pub fn submit_form(
             KeycloakErrorKind::InvalidCredentials,
             "Invalid username or password",
         ));
+    } else if body.contains("kc-terms-text") {
+        return Err(KeycloakError::new(
+            KeycloakErrorKind::TermsAndConditionsNotAccepted,
+            "Terms and Conditions not accepted. Please log in via your web browser to accept them",
+        ));
     } else if body.contains("Update password") {
         return Err(KeycloakError::new(KeycloakErrorKind::PasswordUpdateRequired, "You need to update your password in Keycloak before you can login. Please visit the website to change your password."));
     }
