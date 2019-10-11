@@ -104,6 +104,15 @@ If you prefer reading the docs in traditional manpages, you can just run `man do
 
 ## Troubleshooting
 
+## I am behind a proxy
+
+If you are using a proxy, you need to set up the common environment variables for proxy usage.
+
+* `http_proxy` - routes all HTTP traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
+* `https_proxy` - routes all HTTPS traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
+
+**for `saml2aws-auto`, all requests are usually made to HTTPS endpoints, so configuring the `https_proxy` is advised.**
+
 ## My password can't be stored
 
 Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--password` flag with the `groups add`
