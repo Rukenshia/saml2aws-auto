@@ -50,7 +50,7 @@ Let's break the command down into a few pieces:
 
 If you want to add new accounts to an existing group later, you can use the `--append` flag. Also if you want to target specific accounts, you can pass in `--accounts [account names,]`. Use `saml2aws-auto groups add --help` for more info.
 
-Next, You will be asked a few questions:
+Next, you will be asked a few questions:
 
 ```
 ? IDP URL [localhost]: https://my.idp/realms/myrealm/protocol/saml/clients/aws
@@ -76,7 +76,7 @@ my-accounts:
 Group configuration updated
 ```
 
-The only thing left to do now is refreshing your credentials:
+The only thing left to do now is refresh your credentials:
 
 ```bash
 $ saml2aws-auto refresh my-accounts
@@ -106,12 +106,12 @@ If you prefer reading the docs in traditional manpages, you can just run `man do
 
 ## I am behind a proxy
 
-If you are using a proxy, you need to set up the common environment variables for proxy usage.
+If you are using a proxy, you need to set up the  common environment variables for proxy usage.
 
 * `http_proxy` - routes all HTTP traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
 * `https_proxy` - routes all HTTPS traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
 
-**for `saml2aws-auto`, all requests are usually made to HTTPS endpoints, so configuring the `https_proxy` is advised.**
+**for `saml2aws-auto`, all requests are usually made to HTTPS endpoints, therefore configuring the `https_proxy` is advised.**
 
 ## My password can't be stored
 
@@ -120,4 +120,4 @@ and `refresh` commands to circumvent this.
 
 ## `The name org.freedesktop.secrets was not provided by any .service files (org.freedesktop.DBus.Error.ServiceUnknown)))`
 
-This is an error specific to linux and tells you that you currently don't have any secret manager implementing the Freedesktop Secret Service set up. Usually, a keyring app such as GNOME-Keyring or another tool is pre-installed. Open that up and configure your master password and the default vault for your secrets and retry running saml2aws-auto. [Another link to what apps provide this API](https://specifications.freedesktop.org/secret-service/)
+This is an error specific to linux and tells you that you currently don't have any secret manager implementing the Freedesktop Secret Service set up. Usually, a keyring app such as GNOME-Keyring or another tool is pre-installed. Open that up and configure both your master password and the default vault for your secrets and try rerunning saml2aws-auto. [Another link to what apps provide this API](https://specifications.freedesktop.org/secret-service/)
