@@ -43,7 +43,7 @@ pub fn assume_role(
 
     let text = res.text().unwrap();
 
-    let response: AssumeRoleResponse = serde_xml_rs::deserialize(text.as_bytes()).unwrap();
+    let response: AssumeRoleResponse = serde_xml_rs::from_str(&text).unwrap();
 
     let credentials = (&response.response[0].result)
         .into_iter()

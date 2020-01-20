@@ -195,7 +195,7 @@ pub fn command(matches: &ArgMatches) {
                     println!(
                         "{} Multithreading error\t{}",
                         style("!").with(Color::Red),
-                        style(e.downcast_ref::<Box<Error>>().unwrap().description())
+                        style(e.downcast_ref::<Box<dyn Error>>().unwrap().description())
                             .with(Color::Red)
                     );
                 }
@@ -255,7 +255,7 @@ impl Error for RefreshError {
         &self.msg
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         // Generic error, underlying cause isn't tracked.
         None
     }

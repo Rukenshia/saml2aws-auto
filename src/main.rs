@@ -46,12 +46,12 @@ fn main() {
     let matches = app.get_matches();
 
     let level = match matches.occurrences_of("verbose") {
+        0 => None,
         1 => Some(LevelFilter::Error),
         2 => Some(LevelFilter::Warn),
         3 => Some(LevelFilter::Info),
         4 => Some(LevelFilter::Debug),
-        5...999 => Some(LevelFilter::Trace),
-        _ => None,
+        _ => Some(LevelFilter::Trace),
     };
 
     if let Some(level) = level {

@@ -75,7 +75,7 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
         .replace("</saml:", "</")
         .replace("</samlp:", "</");
 
-    let raw_assertion: SAMLResponse = serde_xml_rs::deserialize(buf.as_bytes())?;
+    let raw_assertion: SAMLResponse = serde_xml_rs::from_str(&buf)?;
 
     let mut assertion = Assertion {
         role_session_name: String::new(),
