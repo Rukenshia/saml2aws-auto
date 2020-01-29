@@ -235,7 +235,7 @@ pub fn interactive_create(default: Config) {
     );
 }
 
-pub fn check_or_interactive_create() -> bool {
+pub fn check_or_interactive_create(skip_password_prompt: bool) -> bool {
     if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
         let cfg = match load_or_default() {
             Ok(c) => c,
@@ -254,6 +254,10 @@ pub fn check_or_interactive_create() -> bool {
         };
 
         if let Some(ref username) = cfg.username {
+            if skip_password_prompt {
+                return true;
+            }
+
             if let Err(_) = panic::catch_unwind(|| {
                 if let Err(_) = get_password(username) {
                     if let Some(password) = password_prompt("IDP Password", Some("")) {

@@ -115,8 +115,14 @@ If you are using a proxy, you need to set up the  common environment variables f
 
 ## My password can't be stored
 
-Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--password` flag with the `groups add`
+Some users have reported issues with the credentials management. If your password can't be stored properly, you can use the `--skip-password-manager` flag combined with the `--password` flag with the `groups add`
 and `refresh` commands to circumvent this.
+
+Example:
+
+```sh
+saml2aws-auto --skip-password-manager groups add example --role Administrator --prefix example --password "my password"
+```
 
 ## `The name org.freedesktop.secrets was not provided by any .service files (org.freedesktop.DBus.Error.ServiceUnknown)))`
 

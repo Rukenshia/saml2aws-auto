@@ -90,7 +90,7 @@ fn main() {
         return;
     }
 
-    if !config::check_or_interactive_create() {
+    if !config::check_or_interactive_create(matches.is_present("skip-password-manager")) {
         return;
     }
 

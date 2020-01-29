@@ -29,9 +29,12 @@ pub fn command(matches: &ArgMatches) {
         let append = matches.is_present("append");
 
         let cfg_username = cfg.username.unwrap();
-        let cfg_password = cfg.password.unwrap();
         let username = matches.value_of("username").unwrap_or(&cfg_username);
-        let password = matches.value_of("password").unwrap_or(&cfg_password);
+
+        let password = match matches.value_of("password") {
+            Some(s) => s.to_owned(),
+            None => cfg.password.unwrap().clone(),
+        };
 
         let mfa = matches
             .value_of("mfa")
@@ -71,7 +74,7 @@ pub fn command(matches: &ArgMatches) {
             &mut cookie_jar,
             &cfg.idp_url,
             username,
-            password,
+            &password,
             &mfa,
             true,
         ) {

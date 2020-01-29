@@ -29,9 +29,12 @@ pub fn command(matches: &ArgMatches) {
     let force = matches.is_present("force");
 
     let cfg_username = cfg.username.as_ref().unwrap();
-    let cfg_password = cfg.password.as_ref().unwrap();
     let username = matches.value_of("username").unwrap_or(&cfg_username);
-    let password = matches.value_of("password").unwrap_or(&cfg_password);
+
+    let password = match matches.value_of("password") {
+        Some(s) => s.to_owned(),
+        None => cfg.password.as_ref().unwrap().clone(),
+    };
 
     {
         let group = match cfg.groups.get_mut(group_name) {
@@ -83,7 +86,7 @@ pub fn command(matches: &ArgMatches) {
                 &mut cookie_jar,
                 &cfg.idp_url,
                 username,
-                password,
+                &password,
                 &mfa.trim(),
                 false,
             ) {
