@@ -113,7 +113,7 @@ pub fn submit_form(
     if body.contains("Invalid username or password") {
         return Err(KeycloakError::new(
             KeycloakErrorKind::InvalidCredentials,
-            "Invalid username or password",
+            "Invalid username or password. If you changed your password recently, please run saml2aws-auto configure",
         ));
     } else if body.contains("kc-terms-text") {
         return Err(KeycloakError::new(
