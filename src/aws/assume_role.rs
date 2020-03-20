@@ -1,6 +1,6 @@
 use super::client;
 use aws::xml::{AssumeRoleResponse, AssumeRoleResult, Credentials};
-use reqwest::Response;
+use reqwest::blocking::Response;
 use serde_xml_rs;
 use std::error::Error;
 use std::io;
@@ -11,7 +11,7 @@ pub fn assume_role(
     saml_assertion: &str,
     session_duration: Option<i64>,
 ) -> Result<Credentials, impl Error> {
-    let mut res: Response = match client::get_proxied_client_builder()
+    let res: Response = match client::get_proxied_client_builder()
         .build()
         .unwrap()
         .post("https://sts.amazonaws.com/")
@@ -34,10 +34,11 @@ pub fn assume_role(
     };
 
     if res.status() != 200 {
+        let status = res.status();
         println!("response: '{:?}'", res.text());
         return Err(io::Error::new(
             io::ErrorKind::Other,
-            format!("sts assume role returned {}", res.status()),
+            format!("sts assume role returned {}", status),
         ));
     }
 

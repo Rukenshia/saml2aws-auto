@@ -51,7 +51,7 @@ pub fn get_assertion_response(
 }
 
 fn do_login_flow(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     cookie_jar: &mut CookieJar,
     login_url: &str,
     username: &str,
@@ -76,7 +76,7 @@ fn do_login_flow(
 }
 
 pub fn submit_form(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     cookie_jar: &mut CookieJar,
     url: &str,
     params: &[(&str, &str)],
@@ -87,7 +87,7 @@ pub fn submit_form(
         .collect::<Vec<String>>()
         .join("; ");
 
-    let mut res = client
+    let res = client
         .post(url)
         .form(&params)
         .header("Cookie", cookie)
@@ -128,7 +128,7 @@ pub fn submit_form(
 }
 
 pub fn get_login_page(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     cookie_jar: &mut CookieJar,
     url: &str,
 ) -> Result<String, KeycloakError> {
@@ -142,7 +142,7 @@ pub fn get_login_page(
     trace!("get_login_page.cookie={}", &cookie);
 
     trace!("get_login_page.send");
-    let mut res = client
+    let res = client
         .get(url)
         .header("Cookie", cookie)
         .send()
@@ -235,7 +235,7 @@ pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), K
 }
 
 pub fn submit_saml_response_form(
-    client: &reqwest::Client,
+    client: &reqwest::blocking::Client,
     cookie_jar: &mut CookieJar,
     url: &str,
     response: &str,
@@ -249,7 +249,7 @@ pub fn submit_saml_response_form(
         .join("; ");
     trace!("submit_saml_response_form.cookie={}", &cookie);
 
-    let mut res = client
+    let res = client
         .post(url)
         .form(&params)
         .header("Cookie", cookie)

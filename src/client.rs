@@ -1,4 +1,5 @@
-use reqwest::{ClientBuilder, Proxy};
+use reqwest::blocking::ClientBuilder;
+use reqwest::Proxy;
 use std::env;
 use url::Url;
 
