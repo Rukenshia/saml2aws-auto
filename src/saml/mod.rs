@@ -60,6 +60,9 @@ pub struct Assertion {
 pub struct Role {
     pub arn: String,
     pub principal_arn: String,
+
+    pub account_id: String,
+    pub role_name: String,
 }
 
 pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::Error> {
@@ -94,10 +97,15 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
             }
             "Role" => for value in &attribute.values {
                 let split = value.value.split(",").collect::<Vec<&str>>();
+                let arn: String = split[0].into();
+                let principal_arn = split[1].into();
+                let (account_id, role_name) = arn_to_role_info(&arn);
 
                 assertion.roles.push(Role {
-                    arn: split[0].into(),
-                    principal_arn: split[1].into(),
+                    arn: arn,
+                    principal_arn: principal_arn,
+                    account_id: account_id,
+                    role_name: role_name,
                 });
             },
             _ => {}
@@ -105,4 +113,34 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
     }
 
     Ok(assertion)
+}
+
+// Returns the Account ID and Role Name
+fn arn_to_role_info(arn: &str) -> (String, String) {
+    let split = arn.split(":").collect::<Vec<&str>>();
+
+    return (split[4].into(), split[5].to_owned().replace("role/", ""));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn arn_to_role_info_returns_account_id() {
+        let given = "arn:aws:iam::123456789012:role/ARoleName";
+
+        let (account_id, _) = arn_to_role_info(given);
+
+        assert_eq!(account_id, "123456789012");
+    }
+
+    #[test]
+    fn arn_to_role_info_returns_role_name() {
+        let given = "arn:aws:iam::123456789012:role/ARoleName";
+
+        let (_, role_name) = arn_to_role_info(given);
+
+        assert_eq!(role_name, "ARoleName");
+    }
 }

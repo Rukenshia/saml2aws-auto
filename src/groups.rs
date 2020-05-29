@@ -70,7 +70,7 @@ pub fn command(matches: &ArgMatches) {
         trace!("command.get_assertion_response");
 
         let mut cookie_jar = CookieJar::new();
-        let (_, web_response) = match get_assertion_response(
+        let (saml_response, web_response) = match get_assertion_response(
             &mut cookie_jar,
             &cfg.idp_url,
             username,
@@ -96,7 +96,7 @@ pub fn command(matches: &ArgMatches) {
         };
 
         trace!("command.extract_saml_accounts");
-        let aws_list = match extract_saml_accounts(&web_response.unwrap()) {
+        let aws_list = match extract_saml_accounts(&web_response.unwrap(), &saml_response) {
             Ok(l) => l,
             Err(e) => {
                 trace!("command.extract_saml_accounts.err");
@@ -114,12 +114,35 @@ pub fn command(matches: &ArgMatches) {
             }
         };
 
-        if let Some(prefix) = prefix {
-            accounts = get_acocunts_prefixed_by(&aws_list, prefix, role);
-        }
-        if let Some(account_names) = account_names {
-            accounts =
-                get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
+        if aws_list.len() == 1 {
+            // This is a special case because the user will never see a role list form
+            // on the web console. We will now add a single account with the account id
+            // and ask the user for a name.
+
+            println!(
+                "\t{}",
+                style("WARNING")
+                    .with(Color::Yellow)
+            );
+            println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
+
+            let account_name = prompt("Account name", None).unwrap();
+
+
+            accounts = vec![Account {
+                name: account_name,
+                arn: aws_list[0].arn.clone(),
+                valid_until: None,
+            }];
+        } else {
+
+            if let Some(prefix) = prefix {
+                accounts = get_acocunts_prefixed_by(&aws_list, prefix, role);
+            }
+            if let Some(account_names) = account_names {
+                accounts =
+                    get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
+            }
         }
 
         if accounts.len() == 0 {
