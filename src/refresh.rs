@@ -33,7 +33,7 @@ pub fn command(matches: &ArgMatches) {
 
     let password = match matches.value_of("password") {
         Some(s) => s.to_owned(),
-        None => cfg.password.as_ref().unwrap().clone(),
+        None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
     };
 
     {
