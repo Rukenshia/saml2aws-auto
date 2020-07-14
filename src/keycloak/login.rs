@@ -68,7 +68,7 @@ fn do_login_flow(
     let totp = get_totp_form(&doc)?;
 
     // Submit TOTP
-    let params = [("totp", token)];
+    let params = [("otp", token),("totp", token)];
     trace!("do_login_flow.submit_form_totp");
     let doc = submit_form(&client, cookie_jar, &totp.action, &params)?;
 
