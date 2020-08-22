@@ -1,5 +1,5 @@
 name: saml2aws-auto
-version: "1.9.0"
+version: "1.10.0"
 author: Jan Christophersen <jan@ruken.pw>
 about: A simple to use management tool for multiple AWS account credentials when using Keycloak as Identity Provider
 settings:
@@ -80,6 +80,10 @@ subcommands:
         - session_duration:
             long: session-duration
             help: The session duration when refreshing tokens. Maximum is defined in the AWS Role. Omit to implicitly use assertion duration
+            takes_value: true
+        - sts_endpoint:
+            long: sts-endpoint
+            help: Override the default endpoint used for AWS STS. Useful if you are in the GovCloud
             takes_value: true
         - accounts:
             long: accounts

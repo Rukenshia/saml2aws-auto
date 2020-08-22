@@ -10,11 +10,12 @@ pub fn assume_role(
     principal: &str,
     saml_assertion: &str,
     session_duration: Option<i64>,
+    sts_endpoint: Option<&str>,
 ) -> Result<Credentials, impl Error> {
     let res: Response = match client::get_proxied_client_builder()
         .build()
         .unwrap()
-        .post("https://sts.amazonaws.com/")
+        .post(sts_endpoint.unwrap_or("https://sts.amazonaws.com/"))
         .query(&[("Version", "2011-06-15"), ("Action", "AssumeRoleWithSAML")])
         .form(&[
             ("PrincipalArn", principal),

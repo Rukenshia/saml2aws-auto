@@ -30,6 +30,7 @@ pub struct Config {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
     pub session_duration: Option<i64>,
+    pub sts_endpoint: Option<String>,
     pub accounts: Vec<Account>,
 }
 

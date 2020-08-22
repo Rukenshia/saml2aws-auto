@@ -1447,7 +1447,7 @@ dependencies = [
 
 [[package]]
 name = "saml2aws-auto"
-version = "1.8.1"
+version = "1.9.0"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",

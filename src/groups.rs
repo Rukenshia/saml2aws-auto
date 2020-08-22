@@ -46,6 +46,10 @@ pub fn command(matches: &ArgMatches) {
             .value_of("session_duration")
             .map(|s| s.parse().ok().unwrap());
 
+        let sts_endpoint = matches
+            .value_of("sts_endpoint")
+            .map(|s| s.into());
+
         let prefix = matches.value_of("prefix");
         let account_names = matches.values_of("accounts");
 
@@ -160,7 +164,7 @@ pub fn command(matches: &ArgMatches) {
                 style("SUCCESS")
                     .with(Color::Green)
             );
-            add(name, session_duration, accounts, append)
+            add(name, session_duration, accounts, append, sts_endpoint)
         }
     }
 }
@@ -186,6 +190,22 @@ fn list() {
                 "\t{}: {}",
                 "Session Duration",
                 style("implicit")
+                    .with(Color::Blue)
+            );
+        }
+
+        if let Some(endpoint) = &group.sts_endpoint {
+            println!(
+                "\t{}: {}",
+                "STS Endpoint",
+                style(&format!("{}", endpoint))
+                    .with(Color::Blue)
+            );
+        } else {
+            println!(
+                "\t{}: {}",
+                "STS Endpoint",
+                style("default")
                     .with(Color::Blue)
             );
         }
@@ -253,7 +273,7 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool) {
+fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool, sts_endpoint: Option<String>) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -279,6 +299,15 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
             println!("Group {} exists, replacing accounts", name);
         }
         group.session_duration = session_duration;
+        
+        // Extra logic: if the sts endpoint was set explicitly, assign it to the group
+        // if the parameter is not present, but there was a previous configuration,
+        // reset the sts endpoint to None
+        if sts_endpoint.is_some() {
+            group.sts_endpoint = sts_endpoint.clone();
+        } else if (group.sts_endpoint.is_some() && sts_endpoint.is_none()) {
+            group.sts_endpoint = None;
+        }
         exists = true;
     };
 
@@ -290,9 +319,11 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
             Group {
                 accounts: accounts,
                 session_duration: session_duration,
+                sts_endpoint: sts_endpoint,
             },
         );
     }
+
     println!(
         "\n{}:",
         style(name).with(Color::Yellow)

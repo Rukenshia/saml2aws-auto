@@ -126,6 +126,7 @@ pub fn command(matches: &ArgMatches) {
             let username = format!("{}", username);
             let idp_url = cfg.idp_url.clone();
             let session_duration = group.session_duration.clone();
+            let sts_endpoint = group.sts_endpoint.clone();
             let cookie_jar = cookie_jar.clone();
             let account = account.clone();
 
@@ -139,6 +140,7 @@ pub fn command(matches: &ArgMatches) {
                     &password,
                     &mfa,
                     force,
+                    sts_endpoint,
                 );
             }));
         }
@@ -198,7 +200,7 @@ pub fn command(matches: &ArgMatches) {
                     println!(
                         "{} Multithreading error\t{}",
                         style("!").with(Color::Red),
-                        style(e.downcast_ref::<Box<dyn Error>>().unwrap().description())
+                        style(e.downcast_ref::<Box<dyn Error>>().unwrap().to_string())
                             .with(Color::Red)
                     );
                 }
@@ -273,6 +275,7 @@ fn refresh_account(
     password: &str,
     mfa: &str,
     force: bool,
+    sts_endpoint: Option<String>,
 ) -> Result<(RefreshAccountOutput, CookieJar), RefreshError> {
     if account.session_valid() && !force {
         debug!("refresh_account.session_still_valid");
@@ -351,6 +354,7 @@ fn refresh_account(
         &principal,
         &saml_response,
         session_duration.or(Some(assertion.session_duration)),
+        sts_endpoint.as_deref(),
     ) {
         Ok(res) => {
             trace!("refresh_account.after_assume_role.ok");
