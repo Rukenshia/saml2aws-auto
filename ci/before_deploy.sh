@@ -17,7 +17,7 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
-    cross rustc --bin saml2aws-auto --target $TARGET --release -- -C lto
+    cross rustc --bin saml2aws-auto --target $TARGET --release
 
     fname=target/$TARGET/release/saml2aws-auto
     test -f target/$TARGET/release/saml2aws-auto || fname=target/$TARGET/release/saml2aws-auto.exe
