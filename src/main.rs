@@ -72,7 +72,7 @@ fn main() {
     }
 
     // Check for a new version
-    if let Ok(update::VersionComparison::IsDifferent) =
+    if let Ok(update::VersionComparison::HasNewer) =
         update::compare_version(yaml["version"].as_str().unwrap())
     {
         println!(

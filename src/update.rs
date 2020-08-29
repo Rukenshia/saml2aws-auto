@@ -3,6 +3,8 @@ use std::time::Duration;
 use client;
 use reqwest;
 
+extern crate semver;
+
 #[derive(Deserialize)]
 pub struct VersionInfo {
     pub html_url: String,
@@ -10,9 +12,8 @@ pub struct VersionInfo {
     pub body: Option<String>,
 }
 
-// TODO: actually check for "newer" version using semver comparison
 pub enum VersionComparison {
-    IsDifferent,
+    HasNewer,
     IsSame,
 }
 
@@ -27,9 +28,11 @@ fn get_latest_version() -> Result<VersionInfo, reqwest::Error> {
 
 pub fn compare_version(to: &str) -> Result<VersionComparison, reqwest::Error> {
     let info = get_latest_version()?;
+    let remote_version = semver::Version::parse(&info.tag_name).unwrap();
+    let current_version = semver::Version::parse(to).unwrap();
 
-    if to != info.tag_name {
-        Ok(VersionComparison::IsDifferent)
+    if remote_version > current_version {
+        Ok(VersionComparison::HasNewer)
     } else {
         Ok(VersionComparison::IsSame)
     }
