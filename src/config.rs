@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -86,7 +85,7 @@ pub fn load_or_default() -> Result<Config, io::Error> {
 
                     Ok(cfg)
                 }
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.description())),
+                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
             }
         }
         None => Ok(Config::default()),
@@ -178,9 +177,7 @@ pub fn interactive_create(default: Config) {
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
-        style("the exact path to the saml client")
-            .with(Color::Yellow)
-            
+        style("the exact path to the saml client").with(Color::Yellow)
     );
 
     let mut cfg = default;
@@ -230,9 +227,7 @@ pub fn interactive_create(default: Config) {
     cfg.save().unwrap();
     println!(
         "\nAll set!\nIf you need to reconfigure your details, use {}",
-        style("saml2aws-auto configure")
-            .with(Color::Yellow)
-            
+        style("saml2aws-auto configure").with(Color::Yellow)
     );
 }
 
@@ -243,9 +238,7 @@ pub fn check_or_interactive_create(skip_password_prompt: bool) -> bool {
             Err(e) => {
                 println!(
                     "{}: {}",
-                    style("Could not load the saml2aws-auto config file")
-                        .with(Color::Red)
-                        ,
+                    style("Could not load the saml2aws-auto config file").with(Color::Red),
                     e
                 );
                 println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
@@ -293,8 +286,7 @@ impl Config {
     pub fn save(&self) -> Result<(), io::Error> {
         let f = File::create(&self.filename)?;
 
-        serde_yaml::to_writer(f, self)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.description()))
+        serde_yaml::to_writer(f, self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
 }
 

@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
 use config::{prompt, Account, Group};
@@ -12,7 +10,6 @@ use cookie::CookieJar;
 use crossterm::{style, Color};
 
 pub fn command(matches: &ArgMatches) {
-
     if let Some(_) = matches.subcommand_matches("list") {
         list()
     } else if let Some(matches) = matches.subcommand_matches("delete") {
@@ -46,9 +43,7 @@ pub fn command(matches: &ArgMatches) {
             .value_of("session_duration")
             .map(|s| s.parse().ok().unwrap());
 
-        let sts_endpoint = matches
-            .value_of("sts_endpoint")
-            .map(|s| s.into());
+        let sts_endpoint = matches.value_of("sts_endpoint").map(|s| s.into());
 
         let prefix = matches.value_of("prefix");
         let account_names = matches.values_of("accounts");
@@ -62,8 +57,7 @@ pub fn command(matches: &ArgMatches) {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
                 style(name).with(Color::Yellow),
-                style("Must specify either --prefix or --accounts flag")
-                    .with(Color::Red)
+                style("Must specify either --prefix or --accounts flag").with(Color::Red)
             );
             return;
         }
@@ -86,14 +80,10 @@ pub fn command(matches: &ArgMatches) {
             Err(e) => {
                 trace!("command.get_assertion_response.err");
                 error!("{:?}", e);
-                println!(
-                    "{}",
-                    style("FAIL").with(Color::Red)
-                );
+                println!("{}", style("FAIL").with(Color::Red));
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    style(e.description())
-                        .with(Color::Red)
+                    style(e).with(Color::Red)
                 );
                 return;
             }
@@ -105,14 +95,10 @@ pub fn command(matches: &ArgMatches) {
             Err(e) => {
                 trace!("command.extract_saml_accounts.err");
                 error!("{:?}", e);
-                println!(
-                    "{}",
-                    style("FAIL").with(Color::Red)
-                );
+                println!("{}", style("FAIL").with(Color::Red));
                 println!(
                     "\nCould not add group:\n\n\t{}\n",
-                    style(e.description())
-                        .with(Color::Red)
+                    style(e).with(Color::Red)
                 );
                 return;
             }
@@ -123,15 +109,10 @@ pub fn command(matches: &ArgMatches) {
             // on the web console. We will now add a single account with the account id
             // and ask the user for a name.
 
-            println!(
-                "\t{}",
-                style("WARNING")
-                    .with(Color::Yellow)
-            );
+            println!("\t{}", style("WARNING").with(Color::Yellow));
             println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
 
             let account_name = prompt("Account name", None).unwrap();
-
 
             accounts = vec![Account {
                 name: account_name,
@@ -139,31 +120,25 @@ pub fn command(matches: &ArgMatches) {
                 valid_until: None,
             }];
         } else {
-
             if let Some(prefix) = prefix {
                 accounts = get_acocunts_prefixed_by(&aws_list, prefix, role);
             }
             if let Some(account_names) = account_names {
-                accounts =
-                    get_accounts_by_names(&aws_list, account_names.map(|a| a.into()).collect(), role);
+                accounts = get_accounts_by_names(
+                    &aws_list,
+                    account_names.map(|a| a.into()).collect(),
+                    role,
+                );
             }
         }
 
         if accounts.len() == 0 {
-            println!(
-                "\t{}",
-                style("WARNING")
-                    .with(Color::Yellow)
-            );
+            println!("\t{}", style("WARNING").with(Color::Yellow));
             println!("\nNo accounts were found with the given parameters. Possible errors:");
             println!("\t- Wrong prefix/accounts used");
             println!("\t- Wrong role used");
         } else {
-            println!(
-                "\t{}",
-                style("SUCCESS")
-                    .with(Color::Green)
-            );
+            println!("\t{}", style("SUCCESS").with(Color::Green));
             add(name, session_duration, accounts, append, sts_endpoint)
         }
     }
@@ -173,24 +148,19 @@ fn list() {
     let cfg = config::load_or_default().unwrap();
 
     for (name, group) in &cfg.groups {
-        println!(
-            "\n{}:",
-            style(name).with(Color::Yellow)
-        );
+        println!("\n{}:", style(name).with(Color::Yellow));
 
         if let Some(duration) = group.session_duration {
             println!(
                 "\t{}: {}",
                 "Session Duration",
-                style(&format!("{} seconds", duration))
-                    .with(Color::Blue)
+                style(&format!("{} seconds", duration)).with(Color::Blue)
             );
         } else {
             println!(
                 "\t{}: {}",
                 "Session Duration",
-                style("implicit")
-                    .with(Color::Blue)
+                style("implicit").with(Color::Blue)
             );
         }
 
@@ -198,15 +168,13 @@ fn list() {
             println!(
                 "\t{}: {}",
                 "STS Endpoint",
-                style(&format!("{}", endpoint))
-                    .with(Color::Blue)
+                style(&format!("{}", endpoint)).with(Color::Blue)
             );
         } else {
             println!(
                 "\t{}: {}",
                 "STS Endpoint",
-                style("default")
-                    .with(Color::Blue)
+                style("default").with(Color::Blue)
             );
         }
 
@@ -221,8 +189,7 @@ fn list() {
                         println!(
                             "\t{}: {}",
                             &account.name,
-                            style("no valid session")
-                                .with(Color::Red)
+                            style("no valid session").with(Color::Red)
                         );
                     } else {
                         println!(
@@ -237,8 +204,7 @@ fn list() {
                     println!(
                         "\t{}: {}",
                         &account.name,
-                        style("no valid session")
-                            .with(Color::Red)
+                        style("no valid session").with(Color::Red)
                     );
                 }
             };
@@ -259,8 +225,7 @@ fn delete(name: &str) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
             style(name).with(Color::Yellow),
-            style("The specified group does not exist")
-                .with(Color::Red)
+            style("The specified group does not exist").with(Color::Red)
         );
         return;
     }
@@ -273,7 +238,13 @@ fn delete(name: &str) {
     );
 }
 
-fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append_only: bool, sts_endpoint: Option<String>) {
+fn add(
+    name: &str,
+    session_duration: Option<i64>,
+    accounts: Vec<Account>,
+    append_only: bool,
+    sts_endpoint: Option<String>,
+) {
     let mut cfg = config::load_or_default().unwrap();
 
     let mut exists = false;
@@ -299,13 +270,13 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
             println!("Group {} exists, replacing accounts", name);
         }
         group.session_duration = session_duration;
-        
+
         // Extra logic: if the sts endpoint was set explicitly, assign it to the group
         // if the parameter is not present, but there was a previous configuration,
         // reset the sts endpoint to None
         if sts_endpoint.is_some() {
             group.sts_endpoint = sts_endpoint.clone();
-        } else if (group.sts_endpoint.is_some() && sts_endpoint.is_none()) {
+        } else if group.sts_endpoint.is_some() && sts_endpoint.is_none() {
             group.sts_endpoint = None;
         }
         exists = true;
@@ -324,10 +295,7 @@ fn add(name: &str, session_duration: Option<i64>, accounts: Vec<Account>, append
         );
     }
 
-    println!(
-        "\n{}:",
-        style(name).with(Color::Yellow)
-    );
+    println!("\n{}:", style(name).with(Color::Yellow));
 
     for account in &cfg.groups.get(name).unwrap().accounts {
         println!("\t{}: {}", account.name, account.arn,);

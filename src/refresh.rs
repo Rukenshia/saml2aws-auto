@@ -101,7 +101,7 @@ pub fn command(matches: &ArgMatches) {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
                             style("!").with(Color::Red),
-                            style(e.description()).with(Color::Red)
+                            style(e).with(Color::Red)
                         );
                     }
 
@@ -189,11 +189,7 @@ pub fn command(matches: &ArgMatches) {
                         }
                     }
                     Err(e) => {
-                        println!(
-                            "{}\t{}",
-                            e.account_name,
-                            style(e.description()).with(Color::Red)
-                        );
+                        println!("{}\t{}", e.account_name, style(&e).with(Color::Red));
                     }
                 },
                 Err(e) => {
@@ -312,11 +308,11 @@ fn refresh_account(
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
                     style("!").with(Color::Red),
-                    style(e.description()).with(Color::Red)
+                    style(&e).with(Color::Red)
                 );
             }
 
-            return Err(RefreshError::new(&account.name, e.description()));
+            return Err(RefreshError::new(&account.name, &e.to_string()));
         }
     };
 
@@ -326,7 +322,7 @@ fn refresh_account(
         Ok(a) => a,
         Err(e) => {
             trace!("refresh_account.parse_assertion.err");
-            return Err(RefreshError::new(&account.name, e.description()));
+            return Err(RefreshError::new(&account.name, &e.to_string()));
         }
     };
 
@@ -374,7 +370,7 @@ fn refresh_account(
         }
         Err(e) => {
             trace!("refresh_account.after_assume_role.err");
-            return Err(RefreshError::new(&account.name, e.description()));
+            return Err(RefreshError::new(&account.name, &e.to_string()));
         }
     };
 }

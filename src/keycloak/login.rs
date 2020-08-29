@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use super::cookie::{self, CookieJar};
 use super::reqwest;
 use super::scraper::Html;
@@ -68,7 +66,7 @@ fn do_login_flow(
     let totp = get_totp_form(&doc)?;
 
     // Submit TOTP
-    let params = [("otp", token),("totp", token)];
+    let params = [("otp", token), ("totp", token)];
     trace!("do_login_flow.submit_form_totp");
     let doc = submit_form(&client, cookie_jar, &totp.action, &params)?;
 
@@ -92,7 +90,7 @@ pub fn submit_form(
         .form(&params)
         .header("Cookie", cookie)
         .send()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, &e.to_string()))?;
 
     // Then we add cookies in the jar given the response
     res.headers().iter().for_each(|(name, raw_cookie)| {
@@ -108,7 +106,7 @@ pub fn submit_form(
 
     let body = res
         .text()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, &e.to_string()))?;
 
     if body.contains("Invalid username or password") {
         return Err(KeycloakError::new(
@@ -150,7 +148,7 @@ pub fn get_login_page(
             trace!("get_login_page.map_err");
             error!("get_login_page: {:?}", e);
 
-            KeycloakError::new(KeycloakErrorKind::Http, e.description())
+            KeycloakError::new(KeycloakErrorKind::Http, &e.to_string())
         })?;
 
     // Then we add cookies in the jar given the response
@@ -169,7 +167,7 @@ pub fn get_login_page(
     Ok(res.text().map_err(|e| {
         trace!("get_login_page.end.map_err");
         error!("get_login_page: {:?}", e);
-        KeycloakError::new(KeycloakErrorKind::Io, e.description())
+        KeycloakError::new(KeycloakErrorKind::Io, &e.to_string())
     })?)
 }
 
@@ -254,7 +252,7 @@ pub fn submit_saml_response_form(
         .form(&params)
         .header("Cookie", cookie)
         .send()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, e.description()))?;
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Http, &e.to_string()))?;
 
     // Then we add cookies in the jar given the response
     res.headers().iter().for_each(|(name, raw_cookie)| {
@@ -273,5 +271,5 @@ pub fn submit_saml_response_form(
 
     Ok(res
         .text()
-        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, e.description()))?)
+        .map_err(|e| KeycloakError::new(KeycloakErrorKind::Io, &e.to_string()))?)
 }

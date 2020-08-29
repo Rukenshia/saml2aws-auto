@@ -30,7 +30,7 @@ pub fn assume_role(
     {
         Ok(r) => r,
         Err(e) => {
-            return Err(io::Error::new(io::ErrorKind::Other, e.description()));
+            return Err(io::Error::new(io::ErrorKind::Other, e));
         }
     };
 

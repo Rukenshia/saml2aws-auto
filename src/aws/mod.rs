@@ -19,7 +19,10 @@ pub struct AWSAccountInfo {
     pub arn: String,
 }
 
-pub fn extract_saml_accounts(body: &str, saml_response_b64: &str) -> Result<Vec<AWSAccountInfo>, io::Error> {
+pub fn extract_saml_accounts(
+    body: &str,
+    saml_response_b64: &str,
+) -> Result<Vec<AWSAccountInfo>, io::Error> {
     trace!("html={:?}", body);
     let doc = Html::parse_document(body);
 
@@ -55,11 +58,14 @@ pub fn extract_saml_accounts(body: &str, saml_response_b64: &str) -> Result<Vec<
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.description()))?;
 
     if parsed_assertion.roles.len() == 0 {
-        return Err(io::Error::new(io::ErrorKind::NotFound, "No role was found in the HTML or SAML Assertion"));
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "No role was found in the HTML or SAML Assertion",
+        ));
     }
 
     // Take the first account
-    Ok(vec![AWSAccountInfo{
+    Ok(vec![AWSAccountInfo {
         name: parsed_assertion.roles[0].account_id.clone(),
         arn: parsed_assertion.roles[0].arn.clone(),
     }])
