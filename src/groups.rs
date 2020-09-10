@@ -137,6 +137,11 @@ pub fn command(matches: &ArgMatches) {
             println!("\nNo accounts were found with the given parameters. Possible errors:");
             println!("\t- Wrong prefix/accounts used");
             println!("\t- Wrong role used");
+
+            trace!("aws_list");
+            for account in &aws_list {
+                trace!("aws_list name={} arn={}", account.name, account.arn);
+            }
         } else {
             println!("\t{}", style("SUCCESS").with(Color::Green));
             add(name, session_duration, accounts, append, sts_endpoint)

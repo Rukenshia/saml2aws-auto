@@ -26,27 +26,35 @@ pub fn extract_saml_accounts(
     trace!("html={:?}", body);
     let doc = Html::parse_document(body);
 
+
+    let role_selector = Selector::parse("div.saml-role").unwrap();
     let name_selector = Selector::parse("div.saml-account-name").unwrap();
     let arn_selector = Selector::parse("label.saml-role-description").unwrap();
     let re = regex::Regex::new(r"Account: (.*?) \(").unwrap();
 
-    let info_from_html: Vec<AWSAccountInfo> = doc
+    let account_divs: Vec<scraper::ElementRef> = doc
         .select(&Selector::parse("fieldset > div.saml-account").unwrap())
-        .map(|div| {
-            let name = div.select(&name_selector).next().unwrap();
-            let arn = div.select(&arn_selector).next().unwrap();
-
-            let name = re.captures(&name.inner_html()).unwrap()[1].into();
-
-            AWSAccountInfo {
-                name: name,
-                arn: arn.value().attr("for").unwrap().into(),
-            }
-        })
         .collect();
 
-    if info_from_html.len() > 0 {
-        return Ok(info_from_html);
+    let mut accounts: Vec<AWSAccountInfo> = vec![];
+    
+    for div in account_divs {
+        let name = div.select(&name_selector).next().unwrap();
+
+        for role in div.select(&role_selector) {
+            let arn = role.select(&arn_selector).next().unwrap();
+    
+            let name = re.captures(&name.inner_html()).unwrap()[1].into();
+    
+            accounts.push(AWSAccountInfo {
+                name: name,
+                arn: arn.value().attr("for").unwrap().into(),
+            });
+        }
+    }
+
+    if accounts.len() > 0 {
+        return Ok(accounts);
     }
 
     // This branch is run when the HTML Response did not contain any AWS accounts
