@@ -7,7 +7,7 @@ use std::path::Path;
 
 use chrono::prelude::*;
 
-use crossterm::{style, Color};
+use crossterm::style::Stylize;
 use dirs;
 use keyring::{Keyring, KeyringError};
 use rpassword;
@@ -104,15 +104,11 @@ pub fn ask_question(question: &str, default: Option<&str>) {
     if let Some(default) = default {
         print!(
             "{} {}",
-            style("?").with(Color::Green),
-            style(&format!("{} [{}]: ", question, default)),
+            "?".green(),
+            format!("{} [{}]: ", question, default),
         );
     } else {
-        print!(
-            "{} {}",
-            style("?").with(Color::Green),
-            style(format!("{}: ", question)),
-        );
+        print!("{} {}", "?".green(), format!("{}: ", question),);
     }
 }
 
@@ -177,7 +173,7 @@ pub fn interactive_create(default: Config) {
     println!("Currently, only Keycloak is supported as Identity Provider. When setting the");
     println!(
         "IDP URL, please note that you will have to pass {} of Keycloak.\n",
-        style("the exact path to the saml client").with(Color::Yellow)
+        "the exact path to the saml client".yellow(),
     );
 
     let mut cfg = default;
@@ -227,7 +223,7 @@ pub fn interactive_create(default: Config) {
     cfg.save().unwrap();
     println!(
         "\nAll set!\nIf you need to reconfigure your details, use {}",
-        style("saml2aws-auto configure").with(Color::Yellow)
+        "saml2aws-auto configure".yellow(),
     );
 }
 
@@ -238,7 +234,7 @@ pub fn check_or_interactive_create(skip_password_prompt: bool) -> bool {
             Err(e) => {
                 println!(
                     "{}: {}",
-                    style("Could not load the saml2aws-auto config file").with(Color::Red),
+                    "Could not load the saml2aws-auto config file".red(),
                     e
                 );
                 println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
@@ -261,7 +257,7 @@ pub fn check_or_interactive_create(skip_password_prompt: bool) -> bool {
                 }
             }) {
                 println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
-                         style("WARNING").with(Color::Yellow));
+                         "WARNING".yellow());
                 return false;
             };
         }

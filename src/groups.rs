@@ -7,7 +7,7 @@ use refresh;
 use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
-use crossterm::{style, Color};
+use crossterm::style::Stylize;
 
 pub fn command(matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {
@@ -56,8 +56,8 @@ pub fn command(matches: &ArgMatches) {
         if prefix.is_none() && account_names.is_none() {
             println!(
                 "\nCould not add group {}:\n\n\t{}\n",
-                style(name).with(Color::Yellow),
-                style("Must specify either --prefix or --accounts flag").with(Color::Red)
+                name.yellow(),
+                "Must specify either --prefix or --accounts flag".red(),
             );
             return;
         }
@@ -80,11 +80,8 @@ pub fn command(matches: &ArgMatches) {
             Err(e) => {
                 trace!("command.get_assertion_response.err");
                 error!("{:?}", e);
-                println!("{}", style("FAIL").with(Color::Red));
-                println!(
-                    "\nCould not add group:\n\n\t{}\n",
-                    style(e).with(Color::Red)
-                );
+                println!("{}", "FAIL".red());
+                println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
                 return;
             }
         };
@@ -95,11 +92,8 @@ pub fn command(matches: &ArgMatches) {
             Err(e) => {
                 trace!("command.extract_saml_accounts.err");
                 error!("{:?}", e);
-                println!("{}", style("FAIL").with(Color::Red));
-                println!(
-                    "\nCould not add group:\n\n\t{}\n",
-                    style(e).with(Color::Red)
-                );
+                println!("{}", "FAIL".red());
+                println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
                 return;
             }
         };
@@ -109,7 +103,7 @@ pub fn command(matches: &ArgMatches) {
             // on the web console. We will now add a single account with the account id
             // and ask the user for a name.
 
-            println!("\t{}", style("WARNING").with(Color::Yellow));
+            println!("\t{}", "WARNING".yellow());
             println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
 
             let account_name = prompt("Account name", None).unwrap();
@@ -133,7 +127,7 @@ pub fn command(matches: &ArgMatches) {
         }
 
         if accounts.len() == 0 {
-            println!("\t{}", style("WARNING").with(Color::Yellow));
+            println!("\t{}", "WARNING".yellow());
             println!("\nNo accounts were found with the given parameters. Possible errors:");
             println!("\t- Wrong prefix/accounts used");
             println!("\t- Wrong role used");
@@ -143,7 +137,7 @@ pub fn command(matches: &ArgMatches) {
                 trace!("aws_list name={} arn={}", account.name, account.arn);
             }
         } else {
-            println!("\t{}", style("SUCCESS").with(Color::Green));
+            println!("\t{}", "SUCCESS".green());
             add(name, session_duration, accounts, append, sts_endpoint)
         }
     }
@@ -153,34 +147,22 @@ fn list() {
     let cfg = config::load_or_default().unwrap();
 
     for (name, group) in &cfg.groups {
-        println!("\n{}:", style(name).with(Color::Yellow));
+        println!("\n{}:", name.as_str().yellow());
 
         if let Some(duration) = group.session_duration {
             println!(
                 "\t{}: {}",
                 "Session Duration",
-                style(&format!("{} seconds", duration)).with(Color::Blue)
+                format!("{} seconds", duration).blue()
             );
         } else {
-            println!(
-                "\t{}: {}",
-                "Session Duration",
-                style("implicit").with(Color::Blue)
-            );
+            println!("\t{}: {}", "Session Duration", "implicit".blue(),);
         }
 
         if let Some(endpoint) = &group.sts_endpoint {
-            println!(
-                "\t{}: {}",
-                "STS Endpoint",
-                style(&format!("{}", endpoint)).with(Color::Blue)
-            );
+            println!("\t{}: {}", "STS Endpoint", endpoint.as_str().blue(),);
         } else {
-            println!(
-                "\t{}: {}",
-                "STS Endpoint",
-                style("default").with(Color::Blue)
-            );
+            println!("\t{}: {}", "STS Endpoint", "default".blue());
         }
 
         println!("\n\t{}", "Sessions");
@@ -191,26 +173,17 @@ fn list() {
 
                     let expiration = expiration.signed_duration_since(now);
                     if expiration.num_minutes() < 0 {
-                        println!(
-                            "\t{}: {}",
-                            &account.name,
-                            style("no valid session").with(Color::Red)
-                        );
+                        println!("\t{}: {}", &account.name, "no valid session".red(),);
                     } else {
                         println!(
                             "\t{}: {}",
                             &account.name,
-                            style(&format!("{} minutes left", expiration.num_minutes()))
-                                .with(Color::Green)
+                            format!("{} minutes left", expiration.num_minutes()).green()
                         );
                     }
                 }
                 None => {
-                    println!(
-                        "\t{}: {}",
-                        &account.name,
-                        style("no valid session").with(Color::Red)
-                    );
+                    println!("\t{}: {}", &account.name, "no valid session".red(),);
                 }
             };
         }
@@ -229,18 +202,15 @@ fn delete(name: &str) {
     if !cfg.groups.contains_key(name) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
-            style(name).with(Color::Yellow),
-            style("The specified group does not exist").with(Color::Red)
+            name.yellow(),
+            "The specified group does not exist".red()
         );
         return;
     }
     cfg.groups.remove(name).unwrap();
 
     cfg.save().unwrap();
-    println!(
-        "\nSuccessfully deleted group {}.\n",
-        style(name).with(Color::Yellow)
-    );
+    println!("\nSuccessfully deleted group {}.\n", name.yellow(),);
 }
 
 fn add(
@@ -293,14 +263,14 @@ fn add(
         cfg.groups.insert(
             name.into(),
             Group {
-                accounts: accounts,
-                session_duration: session_duration,
-                sts_endpoint: sts_endpoint,
+                session_duration,
+                sts_endpoint,
+                accounts,
             },
         );
     }
 
-    println!("\n{}:", style(name).with(Color::Yellow));
+    println!("\n{}:", name.yellow());
 
     for account in &cfg.groups.get(name).unwrap().accounts {
         println!("\t{}: {}", account.name, account.arn,);

@@ -1,7 +1,6 @@
 use std::error::Error;
 
 use clap::ArgMatches;
-use crossterm::{style, Color};
 
 use chrono::prelude::*;
 use std::collections::HashMap;
@@ -14,6 +13,7 @@ use aws::credentials::load_credentials_file;
 use aws::xml::Credentials;
 use config::prompt;
 use cookie::CookieJar;
+use crossterm::style::Stylize;
 use keycloak::login::get_assertion_response;
 use keycloak::KeycloakErrorKind;
 use saml::parse_assertion;
@@ -44,8 +44,8 @@ pub fn command(matches: &ArgMatches) {
 
                 println!(
                     "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                    style(group_name).with(Color::Yellow),
-                    style("The specified group does not exist.").with(Color::Red)
+                    group_name.yellow(),
+                    "The specified group does not exist.".red()
                 );
                 return;
             }
@@ -56,7 +56,7 @@ pub fn command(matches: &ArgMatches) {
 
             println!(
                 "Nothing to refresh. Group {} is empty.",
-                style(group_name).with(Color::Yellow)
+                group_name.yellow(),
             );
             return;
         }
@@ -92,7 +92,7 @@ pub fn command(matches: &ArgMatches) {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!("Initial login {}", style("FAIL").with(Color::Red));
+                    println!("Initial login {}", "FAIL".red());
 
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
@@ -100,8 +100,8 @@ pub fn command(matches: &ArgMatches) {
                     {
                         println!(
                             "\n{} Cannot recover from error:\n\n\t{}\n",
-                            style("!").with(Color::Red),
-                            style(e).with(Color::Red)
+                            "!".red(),
+                            e.to_string().red(),
                         );
                     }
 
@@ -109,7 +109,7 @@ pub fn command(matches: &ArgMatches) {
                 }
             };
             trace!("command.initial_login.success");
-            println!("Initial login {}", style("SUCCESS").with(Color::Green));
+            println!("Initial login {}", "SUCCESS".green());
         }
 
         trace!("command.cookie_jar={:?}", cookie_jar);
@@ -167,11 +167,7 @@ pub fn command(matches: &ArgMatches) {
                         accounts.insert(output.account.arn, output.account.valid_until);
 
                         if output.renewed {
-                            println!(
-                                "{}\t{}",
-                                output.account.name,
-                                style("SUCCESS").with(Color::Green)
-                            );
+                            println!("{}\t{}", output.account.name, "SUCCESS".green(),);
                         } else {
                             let now = Local::now();
 
@@ -183,21 +179,22 @@ pub fn command(matches: &ArgMatches) {
                             println!(
                                 "{}\t{}",
                                 output.account.name,
-                                style(&format!("valid for {} minutes", expiration.num_minutes()))
-                                    .with(Color::Green)
+                                format!("valid for {} minutes", expiration.num_minutes()).green(),
                             );
                         }
                     }
                     Err(e) => {
-                        println!("{}\t{}", e.account_name, style(&e).with(Color::Red));
+                        println!("{}\t{}", e.account_name, e.to_string().red());
                     }
                 },
                 Err(e) => {
                     println!(
                         "{} Multithreading error\t{}",
-                        style("!").with(Color::Red),
-                        style(e.downcast_ref::<Box<dyn Error>>().unwrap().to_string())
-                            .with(Color::Red)
+                        "!".red(),
+                        e.downcast_ref::<Box<dyn Error>>()
+                            .unwrap()
+                            .to_string()
+                            .red(),
                     );
                 }
             };
@@ -213,10 +210,10 @@ pub fn command(matches: &ArgMatches) {
             account.valid_until = *accounts.get(&account.arn).unwrap();
         }
 
-        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", style(group_name).with(Color::Yellow));
+        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", group_name.yellow());
         println!(
             "\nExample:\n\n\taws --profile {} s3 ls\n",
-            style(&group.accounts[0].name).with(Color::Yellow)
+            group.accounts[0].name.as_str().yellow(),
         );
     }
 
@@ -299,7 +296,7 @@ fn refresh_account(
     ) {
         Ok(r) => r,
         Err(e) => {
-            println!("{} {}", account.name, style("FAIL").with(Color::Red));
+            println!("{} {}", account.name, "FAIL".red());
 
             if e.kind == KeycloakErrorKind::InvalidCredentials
                 || e.kind == KeycloakErrorKind::InvalidToken
@@ -307,8 +304,8 @@ fn refresh_account(
             {
                 println!(
                     "\n{} Cannot recover from error:\n\n\t{}\n",
-                    style("!").with(Color::Red),
-                    style(&e).with(Color::Red)
+                    "!".red(),
+                    e.to_string().red(),
                 );
             }
 

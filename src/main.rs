@@ -35,7 +35,7 @@ mod update;
 use std::io;
 
 use clap::App;
-use crossterm::{style, Color};
+use crossterm::style::Stylize;
 use log::LevelFilter;
 
 fn main() {
@@ -77,7 +77,7 @@ fn main() {
     {
         println!(
             "\n\t{}",
-            style("A new version of saml2aws-auto is available").with(Color::Green)
+            "A new version of saml2aws-auto is available".green()
         );
         println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
         println!("");
