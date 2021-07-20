@@ -73,9 +73,11 @@ pub fn command(matches: &ArgMatches) {
             None => {
                 debug!("mfa flag not set, no valid session");
 
+                println!("pre-prompt");
                 prompt("MFA Token", Some("000000")).unwrap()
             }
         };
+        println!("post-prompt");
 
         let mut cookie_jar = CookieJar::new();
 

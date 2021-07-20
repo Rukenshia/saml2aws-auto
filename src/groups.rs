@@ -8,6 +8,8 @@ use chrono::prelude::*;
 use clap::ArgMatches;
 use cookie::CookieJar;
 use crossterm::style::Stylize;
+use std::io;
+use std::io::prelude::*;
 
 pub fn command(matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {
@@ -65,6 +67,7 @@ pub fn command(matches: &ArgMatches) {
         let mut accounts: Vec<Account> = vec![];
 
         print!("Listing allowed roles for your account\t");
+        io::stdout().flush().unwrap();
         trace!("command.get_assertion_response");
 
         let mut cookie_jar = CookieJar::new();

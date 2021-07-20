@@ -101,15 +101,19 @@ pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> 
 }
 
 pub fn ask_question(question: &str, default: Option<&str>) {
-    if let Some(default) = default {
-        print!(
-            "{} {}",
-            "?".green(),
-            format!("{} [{}]: ", question, default),
-        );
-    } else {
-        print!("{} {}", "?".green(), format!("{}: ", question),);
+    match default {
+        Some(default) => {
+            print!(
+                "{} {}",
+                "?".green(),
+                format!("{} [{}]: ", question, default),
+            );
+        }
+        None => {
+            print!("{} {}", "?".green(), format!("{}: ", question),);
+        }
     }
+    io::stdout().flush().unwrap();
 }
 
 pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> {
