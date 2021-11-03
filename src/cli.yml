@@ -1,95 +1,25 @@
 name: saml2aws-auto
-version: "1.10.1"
+version: '1.10.2'
 author: Jan Christophersen <jan@ruken.pw>
 about: A simple to use management tool for multiple AWS account credentials when using Keycloak as Identity Provider
 settings:
-- SubcommandRequiredElseHelp 
+  - SubcommandRequiredElseHelp
 args:
-- verbose:
-    short: v
-    multiple: true
-    help: Sets the level of verbosity
-- skip-password-manager:
-    long: skip-password-manager
-    help: Do not store the IDP Password anywhere
+  - verbose:
+      short: v
+      multiple: true
+      help: Sets the level of verbosity
+  - skip-password-manager:
+      long: skip-password-manager
+      help: Do not store the IDP Password anywhere
 subcommands:
-- version:
-    about: Displays the version
-- configure:
-    about: Configure saml2aws-auto settings like your IDP
-- refresh:
-    about: Refreshes all credentials for a group
-    args: &refresh_args
-    - username:
-        long: username
-        help: IDP Username
-        takes_value: true
-    - password:
-        long: password
-        help: IDP Password
-        takes_value: true
-    - mfa:
-        long: mfa
-        takes_value: true
-        help: MFA Token
-    - force:
-        long: force
-        help: Ignore valid sessions and refresh anyway
-    - GROUP:
-        required: true
-        index: 1
-        takes_value: true
-        help: Group Name
-- groups:
-    about: Manage role groups
-    settings:
-    - SubcommandRequiredElseHelp 
-    subcommands:
-    - refresh:
-        about: Alias for saml2aws-auto refresh
-        args: *refresh_args
-    - list:
-        about: Lists all configured groups
-    - delete:
-        about: Deletes a group
-        args:
-        - GROUP:
-            help: Group Name
-            index: 1
-            required: true
-            takes_value: true
-    - add:
-        about: Adds a group with one or more roles
-        args:
-        - role:
-            long: role
-            required: true
-            takes_value: true
-            help: Role to assume (e.g. Administrator)
-        - NAME:
-            takes_value: true
-            required: true
-            help: Name of the group
-        - append:
-            long: append
-            help: When set, existing accounts in the group will not be removed. New accounts will be appended to the list
-        - prefix:
-            long: prefix
-            help: Only add accounts starting with the given string
-            takes_value: true
-        - session_duration:
-            long: session-duration
-            help: The session duration when refreshing tokens. Maximum is defined in the AWS Role. Omit to implicitly use assertion duration
-            takes_value: true
-        - sts_endpoint:
-            long: sts-endpoint
-            help: Override the default endpoint used for AWS STS. Useful if you are in the GovCloud
-            takes_value: true
-        - accounts:
-            long: accounts
-            help: AWS Account Name
-            use_delimiter: true
-            takes_value: true
+  - version:
+      about: Displays the version
+  - configure:
+      about: Configure saml2aws-auto settings like your IDP
+  - refresh:
+      about: Refreshes all credentials for a group
+      args: &refresh_args
         - username:
             long: username
             help: IDP Username
@@ -101,4 +31,74 @@ subcommands:
         - mfa:
             long: mfa
             takes_value: true
-            help: MFA token
+            help: MFA Token
+        - force:
+            long: force
+            help: Ignore valid sessions and refresh anyway
+        - GROUP:
+            required: true
+            index: 1
+            takes_value: true
+            help: Group Name
+  - groups:
+      about: Manage role groups
+      settings:
+        - SubcommandRequiredElseHelp
+      subcommands:
+        - refresh:
+            about: Alias for saml2aws-auto refresh
+            args: *refresh_args
+        - list:
+            about: Lists all configured groups
+        - delete:
+            about: Deletes a group
+            args:
+              - GROUP:
+                  help: Group Name
+                  index: 1
+                  required: true
+                  takes_value: true
+        - add:
+            about: Adds a group with one or more roles
+            args:
+              - role:
+                  long: role
+                  required: true
+                  takes_value: true
+                  help: Role to assume (e.g. Administrator)
+              - NAME:
+                  takes_value: true
+                  required: true
+                  help: Name of the group
+              - append:
+                  long: append
+                  help: When set, existing accounts in the group will not be removed. New accounts will be appended to the list
+              - prefix:
+                  long: prefix
+                  help: Only add accounts starting with the given string
+                  takes_value: true
+              - session_duration:
+                  long: session-duration
+                  help: The session duration when refreshing tokens. Maximum is defined in the AWS Role. Omit to implicitly use assertion duration
+                  takes_value: true
+              - sts_endpoint:
+                  long: sts-endpoint
+                  help: Override the default endpoint used for AWS STS. Useful if you are in the GovCloud
+                  takes_value: true
+              - accounts:
+                  long: accounts
+                  help: AWS Account Name
+                  use_delimiter: true
+                  takes_value: true
+              - username:
+                  long: username
+                  help: IDP Username
+                  takes_value: true
+              - password:
+                  long: password
+                  help: IDP Password
+                  takes_value: true
+              - mfa:
+                  long: mfa
+                  takes_value: true
+                  help: MFA token

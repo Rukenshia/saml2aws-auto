@@ -26,6 +26,7 @@ pub enum AssumeRoleResult {
     AssumedRoleUser(Vec<AssumedRoleUser>),
     Subject(String),
     NameQualifier(String),
+    SourceIdentity(String),
     SubjectType(String),
     Issuer(String),
     Credentials(Credentials),
