@@ -67,15 +67,15 @@ jobs:
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto.exe saml2aws-auto.exe
-          7z a saml2aws-auto-${{ matrix.targets.target }}.zip "saml2aws-auto.exe"
-          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
+          7z a saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}.zip "saml2aws-auto.exe"
+          echo "ASSET=saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
       - name: Bundle release (Linux and macOS)
         if: matrix.targets.os != 'windows-2019'
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto ./saml2aws-auto
-          tar -czvf saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz saml2aws-auto
-          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz" >> $GITHUB_ENV
+          zip saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz saml2aws-auto
+          echo "ASSET=saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz" >> $GITHUB_ENV
       - name: Create release directory for artifact, move file
         shell: bash
         run: |
