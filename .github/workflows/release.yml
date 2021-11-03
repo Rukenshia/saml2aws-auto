@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto ./saml2aws-auto
-          zip saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz saml2aws-auto
+          zip saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip saml2aws-auto
           echo "ASSET=saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip" >> $GITHUB_ENV
       - name: Create release directory for artifact, move file
         shell: bash
