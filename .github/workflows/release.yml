@@ -1,0 +1,132 @@
+name: build
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Which tag to deploy as:"
+        required: true
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build-release:
+    name: build
+    runs-on: ${{ matrix.targets.os }}
+    container: ${{ matrix.targets.container }}
+    env:
+      RUST_BACKTRACE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        targets:
+          - os: "ubuntu-20.04"
+            target: "x86_64-unknown-linux-gnu"
+            cross: false
+          - os: "macos-11"
+            target: "x86_64-apple-darwin"
+            cross: false
+          - os: "windows-2019"
+            target: "x86_64-pc-windows-gnu"
+            cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.targets.target }}
+          
+      - name: Install linux packages
+        if: matrix.targets.os == 'ubuntu-20.04'
+        shell: bash
+        run: |
+          sudo apt-get install -y libdbus-1-dev
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.targets.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --verbose --target=${{ matrix.targets.target }}
+          use-cross: ${{ matrix.targets.cross }}
+
+      - name: Bundle release (Windows)
+        if: matrix.targets.os == 'windows-2019'
+        shell: bash
+        run: |
+          cp target/${{ matrix.targets.target }}/release/saml2aws-auto.exe saml2aws-auto.exe
+          7z a saml2aws-auto-${{ matrix.targets.target }}.zip "saml2aws-auto.exe"
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
+      - name: Bundle release (Linux and macOS)
+        if: matrix.targets.os != 'windows-2019'
+        shell: bash
+        run: |
+          cp target/${{ matrix.targets.target }}/release/saml2aws-auto ./saml2aws-auto
+          tar -czvf saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz saml2aws-auto
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz" >> $GITHUB_ENV
+      - name: Create release directory for artifact, move file
+        shell: bash
+        run: |
+          mkdir release
+          mv ${{ env.ASSET }} release/
+      - name: Save release as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          retention-days: 3
+          name: release
+          path: release
+          
+  upload-release:
+    name: upload-release
+    runs-on: ubuntu-latest
+    needs: [build-release]
+    steps:
+    
+      - name: Get the release version from the tag
+        if: env.VERSION == ''
+        run: |
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            echo "Manual run against a tag; overriding actual tag in the environment..."
+            echo "VERSION=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          fi
+      - name: Validate release version
+        run: |
+          echo "Release version: ${{ env.VERSION }}"
+      - name: Get release artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: release
+          path: release
+
+      - name: Print out all release files
+        run: |
+          echo "Generated $(ls ./release | wc -l) files:"
+          ls ./release
+          
+      - name: Upload all saved release files
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: false
+          tag_name: ${{ env.VERSION }}
+          draft: true
+          fail_on_unmatched_files: true
+          name: ${{ env.VERSION }} Release
+          body: |
+            <!-- Write summary here -->
+          files: |
+            ./release/*
