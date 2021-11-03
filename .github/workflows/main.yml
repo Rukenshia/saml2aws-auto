@@ -1,0 +1,66 @@
+# This is a basic workflow to help you get started with Actions
+
+name: build
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-release:
+    name: build
+    runs-on: ${{ matrix.targets.os }}
+    container: ${{ matrix.targets.container }}
+    env:
+      RUST_BACKTRACE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        targets:
+          - os: "ubuntu-20.04"
+            target: "x86_64-unknown-linux-gnu"
+            cross: false
+          - os: "macos-11"
+            target: "x86_64-apple-darwin"
+            cross: false
+          - os: "windows-2019"
+            target: "x86_64-pc-windows-gnu"
+            cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.targets.target }}
+          
+      - name: Install linux packages
+        if: matrix.targets.os == 'ubuntu-20.04'
+        shell: bash
+        run: |
+          sudo apt-get install -y libdbus-1-dev
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.targets.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --verbose --target=${{ matrix.targets.target }}
+          use-cross: ${{ matrix.targets.cross }}
