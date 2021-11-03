@@ -1,0 +1,87 @@
+# This is a basic workflow to help you get started with Actions
+
+name: build
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-release:
+    name: build
+    runs-on: ${{ matrix.targets.os }}
+    container: ${{ matrix.targets.container }}
+    env:
+      RUST_BACKTRACE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        targets:
+          - os: "ubuntu-18.04"
+            target: "x86_64-unknown-linux-gnu"
+            cross: false
+          - os: "macOS-latest"
+            target: "x86_64-apple-darwin"
+            cross: false
+          - os: "windows-2019"
+            target: "x86_64-pc-windows-gnu"
+            cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.targets.target }}
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.targets.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --verbose --target=${{ matrix.targets.target }}
+          use-cross: ${{ matrix.targets.cross }}
+
+      - name: Bundle release and completion (Windows)
+        if: matrix.targets.os == 'windows-2019'
+        shell: bash
+        run: |
+          cp target/${{ matrix.targets.target }}/release/btm.exe btm.exe
+          7z a bottom_${{ matrix.targets.target }}.zip "btm.exe"
+          7z a bottom_${{ matrix.targets.target }}.zip "completion"
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
+      - name: Bundle release and completion (Linux and macOS)
+        if: matrix.targets.os != 'windows-2019'
+        shell: bash
+        run: |
+          cp target/${{ matrix.targets.target }}/release/btm ./btm
+          tar -czvf bottom_${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz btm completion
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.tar.gz" >> $GITHUB_ENV
+      - name: Create release directory for artifact, move file
+        shell: bash
+        run: |
+          mkdir release
+          mv ${{ env.ASSET }} release/
+#       - name: Save release as artifact
+#         uses: actions/upload-artifact@v2
+#         with:
+#           retention-days: 3
+#           name: release
+#           path: release
