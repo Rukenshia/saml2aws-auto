@@ -52,7 +52,7 @@ jobs:
         if: matrix.targets.os == 'ubuntu-20.04'
         shell: bash
         run: |
-          apt-get install -y libdbus-1-dev
+          sudo apt-get install -y libdbus-1-dev
 
       - uses: Swatinem/rust-cache@v1
         with:
