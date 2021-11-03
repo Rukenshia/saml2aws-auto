@@ -37,16 +37,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 1
-          
-      - name: Get the release version from the tag
-        if: env.VERSION == ''
-        run: |
-          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
-            echo "Manual run against a tag; overriding actual tag in the environment..."
-            echo "VERSION=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          else
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          fi
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -61,6 +51,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get install -y libdbus-1-dev
+          
       - uses: Swatinem/rust-cache@v1
         with:
           key: ${{ matrix.targets.target }}
@@ -77,20 +68,23 @@ jobs:
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto.exe saml2aws-auto.exe
-          7z a saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}.zip "saml2aws-auto.exe"
-          echo "ASSET=saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
+          7z a saml2aws-auto-${{ matrix.targets.target }}.zip "saml2aws-auto.exe"
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
+          
       - name: Bundle release (Linux and macOS)
         if: matrix.targets.os != 'windows-2019'
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto ./saml2aws-auto
-          zip saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip saml2aws-auto
-          echo "ASSET=saml2aws-auto-${{ env.VERSION }}-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip" >> $GITHUB_ENV
+          zip saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip saml2aws-auto
+          echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}${{ matrix.targets.suffix }}.zip" >> $GITHUB_ENV
+          
       - name: Create release directory for artifact, move file
         shell: bash
         run: |
           mkdir release
           mv ${{ env.ASSET }} release/
+          
       - name: Save release as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -113,9 +107,11 @@ jobs:
           else
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           fi
+          
       - name: Validate release version
         run: |
           echo "Release version: ${{ env.VERSION }}"
+          
       - name: Get release artifacts
         uses: actions/download-artifact@v2
         with:
