@@ -21,9 +21,7 @@ use saml::parse_assertion;
 use config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
-pub fn command(matches: &ArgMatches) {
-    let mut cfg = config::load_or_default().unwrap();
-
+pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     let group_name = matches.value_of("GROUP").unwrap();
     let mfa = matches.value_of("mfa");
     let force = matches.is_present("force");

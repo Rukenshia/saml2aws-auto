@@ -54,6 +54,11 @@ fn main() {
         _ => Some(LevelFilter::Trace),
     };
 
+    let config_path: String = match matches.value_of("config") {
+        Some(s) => s.to_owned(),
+        None => config::default_filename(),
+    };
+
     if let Some(level) = level {
         fern::Dispatch::new()
             .format(|out, message, record| {
@@ -90,17 +95,24 @@ fn main() {
         return;
     }
 
-    if !config::check_or_interactive_create(matches.is_present("skip-password-manager")) {
+    if !config::check_or_interactive_create(
+        &config_path,
+        matches.is_present("skip-password-manager"),
+    ) {
+        return;
+    }
+
+    let mut config = config::load_or_default(&config_path)
+        .expect("Could not read config, please open an issue on GitHub");
+
+    if let Some(_) = matches.subcommand_matches("configure") {
+        config::interactive_create(config);
         return;
     }
 
     if let Some(matches) = matches.subcommand_matches("groups") {
-        groups::command(matches)
-    } else if let Some(_) = matches.subcommand_matches("configure") {
-        let cfg = config::load_or_default()
-            .expect("Internal error when trying to read config. Please open an issue on GitHub.");
-        config::interactive_create(cfg)
+        groups::command(&mut config, matches)
     } else if let Some(matches) = matches.subcommand_matches("refresh") {
-        refresh::command(matches)
+        refresh::command(&mut config, matches)
     }
 }

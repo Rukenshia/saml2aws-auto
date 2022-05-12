@@ -11,28 +11,26 @@ use crossterm::style::Stylize;
 use std::io;
 use std::io::prelude::*;
 
-pub fn command(matches: &ArgMatches) {
+pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     if let Some(_) = matches.subcommand_matches("list") {
-        list()
+        list(&cfg)
     } else if let Some(matches) = matches.subcommand_matches("delete") {
         let name = matches.value_of("GROUP").unwrap();
 
-        delete(name)
+        delete(cfg, name)
     } else if let Some(matches) = matches.subcommand_matches("refresh") {
-        refresh::command(matches);
+        refresh::command(cfg, matches);
     } else if let Some(matches) = matches.subcommand_matches("add") {
-        let cfg = config::load_or_default().unwrap();
-
         let name = matches.value_of("NAME").unwrap();
         let role = matches.value_of("role").unwrap();
         let append = matches.is_present("append");
 
-        let cfg_username = cfg.username.unwrap();
-        let username = matches.value_of("username").unwrap_or(&cfg_username);
+        let cfg_username = &cfg.username.as_ref().unwrap();
+        let username = matches.value_of("username").unwrap_or(cfg_username);
 
         let password = match matches.value_of("password") {
             Some(s) => s.to_owned(),
-            None => cfg.password.expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
+            None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
         };
 
         let mfa = matches
@@ -141,14 +139,12 @@ pub fn command(matches: &ArgMatches) {
             }
         } else {
             println!("\t{}", "SUCCESS".green());
-            add(name, session_duration, accounts, append, sts_endpoint)
+            add(cfg, name, session_duration, accounts, append, sts_endpoint)
         }
     }
 }
 
-fn list() {
-    let cfg = config::load_or_default().unwrap();
-
+fn list(cfg: &config::Config) {
     for (name, group) in &cfg.groups {
         println!("\n{}:", name.as_str().yellow());
 
@@ -199,9 +195,7 @@ fn list() {
     }
 }
 
-fn delete(name: &str) {
-    let mut cfg = config::load_or_default().unwrap();
-
+fn delete(cfg: &mut config::Config, name: &str) {
     if !cfg.groups.contains_key(name) {
         println!(
             "\nCould not delete the group {}:\n\n\t{}\n",
@@ -217,14 +211,13 @@ fn delete(name: &str) {
 }
 
 fn add(
+    cfg: &mut config::Config,
     name: &str,
     session_duration: Option<i64>,
     accounts: Vec<Account>,
     append_only: bool,
     sts_endpoint: Option<String>,
 ) {
-    let mut cfg = config::load_or_default().unwrap();
-
     let mut exists = false;
 
     if let Some((name, group)) = cfg.groups.iter_mut().find(|&(a, _)| a == name) {

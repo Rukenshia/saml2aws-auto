@@ -45,50 +45,38 @@ const LINE_ENDING: &'static str = "\r\n";
 #[cfg(not(windows))]
 const LINE_ENDING: &'static str = "\n";
 
-fn default_filename() -> String {
+pub fn default_filename() -> String {
     let mut path = dirs::home_dir().unwrap();
     path.push(".saml2aws-auto.yml");
 
     format!("{}", path.to_str().unwrap())
 }
 
-fn get_filename(paths: Vec<&str>) -> Option<&str> {
-    for path in &paths {
-        if Path::new(path).exists() {
-            return Some(path);
-        }
-    }
+pub fn load_or_default(path: &str) -> Result<Config, io::Error> {
+    if Path::new(path).exists() {
+        let mut f = File::open(path)?;
 
-    None
-}
+        let mut buf = String::new();
 
-pub fn load_or_default() -> Result<Config, io::Error> {
-    let default = default_filename();
-    match get_filename(vec!["./saml2aws-auto.yml", &default]) {
-        Some(path) => {
-            let mut f = File::open(path)?;
+        f.read_to_string(&mut buf)?;
 
-            let mut buf = String::new();
+        match serde_yaml::from_str::<Config>(&buf) {
+            Ok(mut cfg) => {
+                cfg.filename = path.to_owned();
 
-            f.read_to_string(&mut buf)?;
-
-            match serde_yaml::from_str::<Config>(&buf) {
-                Ok(mut cfg) => {
-                    cfg.filename = path.to_owned().into();
-
-                    if let Some(ref username) = cfg.username {
-                        cfg.password = match get_password(username) {
-                            Ok(p) => Some(p),
-                            Err(_) => None,
-                        };
-                    }
-
-                    Ok(cfg)
+                if let Some(ref username) = cfg.username {
+                    cfg.password = match get_password(username) {
+                        Ok(p) => Some(p),
+                        Err(_) => None,
+                    };
                 }
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+
+                Ok(cfg)
             }
+            Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
         }
-        None => Ok(Config::default()),
+    } else {
+        Ok(Config::default(path))
     }
 }
 
@@ -231,51 +219,51 @@ pub fn interactive_create(default: Config) {
     );
 }
 
-pub fn check_or_interactive_create(skip_password_prompt: bool) -> bool {
-    if get_filename(vec!["./saml2aws-auto.yml", &default_filename()]).is_some() {
-        let cfg = match load_or_default() {
-            Ok(c) => c,
-            Err(e) => {
-                println!(
-                    "{}: {}",
-                    "Could not load the saml2aws-auto config file".red(),
-                    e
-                );
-                println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
-                println!("If you cannot fix this error, delete the saml2aws-auto.yml file and re-add your groups.");
-                return false;
-            }
-        };
-
-        if let Some(ref username) = cfg.username {
-            if skip_password_prompt {
-                return true;
-            }
-
-            if let Err(_) = panic::catch_unwind(|| {
-                if let Err(_) = get_password(username) {
-                    if let Some(password) = password_prompt("IDP Password", Some("")) {
-                        set_password(username, &password)
-                            .expect("Could not save password in credentials storage");
-                    }
-                }
-            }) {
-                println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
-                         "WARNING".yellow());
-                return false;
-            };
-        }
+pub fn check_or_interactive_create(config_path: &str, skip_password_prompt: bool) -> bool {
+    if !Path::new(config_path).exists() {
+        interactive_create(Config::default(config_path));
         return true;
     }
 
-    interactive_create(Config::default());
+    let cfg = match load_or_default(config_path) {
+        Ok(c) => c,
+        Err(e) => {
+            println!(
+                "{}: {}",
+                "Could not load the saml2aws-auto config file".red(),
+                e
+            );
+            println!("\nPlease check that if you did any manual modifications that your YAML is still valid.");
+            println!("If you cannot fix this error, delete the saml2aws-auto.yml file and re-add your groups.");
+            return false;
+        }
+    };
+
+    if let Some(ref username) = cfg.username {
+        if skip_password_prompt {
+            return true;
+        }
+
+        if let Err(_) = panic::catch_unwind(|| {
+            if let Err(_) = get_password(username) {
+                if let Some(password) = password_prompt("IDP Password", Some("")) {
+                    set_password(username, &password)
+                        .expect("Could not save password in credentials storage");
+                }
+            }
+        }) {
+            println!("\n{}: It seems like there is a problem with managing your credentials. Please use the '--password' flag in all commands for now.\nWe are working on a fix.",
+                         "WARNING".yellow());
+            return false;
+        };
+    }
     return true;
 }
 
 impl Config {
-    pub fn default() -> Self {
+    pub fn default(filename: &str) -> Self {
         Config {
-            filename: default_filename(),
+            filename: filename.to_owned(),
             idp_url: "localhost".into(),
             username: None,
             password: None,
