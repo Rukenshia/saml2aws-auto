@@ -24,9 +24,9 @@ If you are on Linux, you will need to set up a secret tool before running saml2a
 
 ## Features
 
-* Retrieving AWS Credentials when authenticating via SAML (only Keycloak supported at the moment, MFA is mandatory)
-* Management of multiple accounts organised in groups
-* Token expiration time is taken into account (they will not be refreshed if they are still valid)
+- Retrieving AWS Credentials when authenticating via SAML (only Keycloak supported at the moment, MFA is mandatory)
+- Management of multiple accounts organised in groups
+- Token expiration time is taken into account (they will not be refreshed if they are still valid)
 
 ## Getting Started
 
@@ -42,11 +42,11 @@ IDP URL, please note that you will have to pass the exact path to the saml clien
 
 Let's break the command down into a few pieces:
 
-* `saml2aws-auto groups add` tells the CLI to add a new group.
-* `my-accounts` tells the CLI what name you want to use for the group. This can be anything.
-* `--prefix my-accounts` tells it that all the accounts you want to target start with `my-accounts`.
+- `saml2aws-auto groups add` tells the CLI to add a new group.
+- `my-accounts` tells the CLI what name you want to use for the group. This can be anything.
+- `--prefix my-accounts` tells it that all the accounts you want to target start with `my-accounts`.
   In our example, we have two accounts: `my-accounts-staging` and `my-accounts-prod`. That means that the prefix will capture both of these accounts. If you also have `my-other-accounts-staging` and `my-other-accounts-prod` but want all four accounts in the same group, you can use the prefix `my-`.
-* `--role Administrator` identifies which role to use for all accounts.
+- `--role Administrator` identifies which role to use for all accounts.
 
 If you want to add new accounts to an existing group later, you can use the `--append` flag. Also if you want to target specific accounts, you can pass in `--accounts [account names,]`. Use `saml2aws-auto groups add --help` for more info.
 
@@ -95,21 +95,21 @@ Example:
 ## Changing Password / Username / Other Configuration
 
 You can use `saml2aws-auto configure` to reconfigure your details.
+If you have several IDPs that you need to connect to, you can use the `--config` option to provide
+a path to a separate config file for saml2aws-auto.
 
 ## Usage
 
 You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
 
-If you prefer reading the docs in traditional manpages, you can just run `man docs/saml2aws-auto.1` instead.
-
 ## Troubleshooting
 
 ## I am behind a proxy
 
-If you are using a proxy, you need to set up the  common environment variables for proxy usage.
+If you are using a proxy, you need to set up the common environment variables for proxy usage.
 
-* `http_proxy` - routes all HTTP traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
-* `https_proxy` - routes all HTTPS traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
+- `http_proxy` - routes all HTTP traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
+- `https_proxy` - routes all HTTPS traffic through the given proxy (e.g. `http://user:password@localhost:1234`)
 
 **for `saml2aws-auto`, all requests are usually made to HTTPS endpoints, therefore configuring the `https_proxy` is advised.**
 
