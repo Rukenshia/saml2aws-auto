@@ -7,7 +7,7 @@ authors = ["Jan Christopehrsen <jan@ruken.pw>"]
 
 [dependencies]
 clap = {version = "2.33", features = ["yaml"]}
-regex = "1.3"
+regex = "1.5"
 keyring = "0.10.1"
 serde = "1.0"
 serde_derive = "1.0"
