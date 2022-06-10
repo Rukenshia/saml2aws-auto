@@ -17,6 +17,10 @@ use crossterm::style::Stylize;
 use keycloak::login::get_assertion_response;
 use keycloak::KeycloakErrorKind;
 use saml::parse_assertion;
+use tabled::{
+    object::{Columns, Object},
+    Alignment, Modify, Style, Table, Tabled,
+};
 
 use config;
 
@@ -30,7 +34,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     let username = matches.value_of("username").unwrap_or(&cfg_username);
 
     let password = match matches.value_of("password") {
-        Some(s) => s.to_owned(),
+        Some(s) => s.to_string(),
         None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
     };
 
@@ -90,8 +94,6 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!("Initial login {}", "FAIL".red());
-
                     if e.kind == KeycloakErrorKind::InvalidCredentials
                         || e.kind == KeycloakErrorKind::InvalidToken
                         || e.kind == KeycloakErrorKind::PasswordUpdateRequired
@@ -107,7 +109,6 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                 }
             };
             trace!("command.initial_login.success");
-            println!("Initial login {}", "SUCCESS".green());
         }
 
         trace!("command.cookie_jar={:?}", cookie_jar);
@@ -147,8 +148,19 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
 
         let (mut credentials_file, filepath) = load_credentials_file().unwrap();
 
-        for t in threads {
-            match t.join() {
+        #[derive(Debug, Tabled)]
+        struct TableRefreshedAccount {
+            #[tabled(rename = "Account Name")]
+            account_name: String,
+            #[tabled(rename = "Refreshed")]
+            refreshed: String,
+            #[tabled(rename = "Result")]
+            expiration: String,
+        }
+
+        let outputs: Vec<TableRefreshedAccount> = threads
+            .into_iter()
+            .map(|t| match t.join() {
                 Ok(res) => match res {
                     Ok((output, _)) => {
                         if let Some(credentials) = output.credentials {
@@ -164,39 +176,54 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                         }
                         accounts.insert(output.account.arn, output.account.valid_until);
 
-                        if output.renewed {
-                            println!("{}\t{}", output.account.name, "SUCCESS".green(),);
-                        } else {
-                            let now = Local::now();
+                        let now = Local::now();
 
-                            let expiration = output
-                                .account
-                                .valid_until
-                                .unwrap()
-                                .signed_duration_since(now);
-                            println!(
-                                "{}\t{}",
-                                output.account.name,
-                                format!("valid for {} minutes", expiration.num_minutes()).green(),
-                            );
+                        let expiration = format!(
+                            "valid for {} minutes",
+                            format!(
+                                "{}",
+                                output
+                                    .account
+                                    .valid_until
+                                    .unwrap()
+                                    .signed_duration_since(now)
+                                    .num_minutes()
+                            )
+                            .green()
+                        );
+
+                        TableRefreshedAccount {
+                            account_name: output.account.name,
+                            refreshed: match output.renewed {
+                                true => "✓".green().to_string(),
+                                false => "⨯".bold().red().to_string(),
+                            },
+                            expiration,
                         }
                     }
-                    Err(e) => {
-                        println!("{}\t{}", e.account_name, e.to_string().red());
-                    }
+                    Err(ref e) => TableRefreshedAccount {
+                        account_name: e.account_name.clone(),
+                        refreshed: "⨯".bold().red().to_string(),
+                        expiration: e.to_string().red().to_string(),
+                    },
                 },
-                Err(e) => {
-                    println!(
-                        "{} Multithreading error\t{}",
-                        "!".red(),
-                        e.downcast_ref::<Box<dyn Error>>()
-                            .unwrap()
-                            .to_string()
-                            .red(),
-                    );
-                }
-            };
-        }
+                Err(e) => TableRefreshedAccount {
+                    account_name: "unknown".to_string(),
+                    refreshed: "⨯".bold().red().to_string(),
+                    expiration: format!("{:?}", e),
+                },
+            })
+            .collect();
+
+        print!(
+            "\n\n{}",
+            Table::new(outputs)
+                .with(Style::modern())
+                .with(
+                    Modify::new(Columns::single(0).and(Columns::single(2))).with(Alignment::left())
+                )
+                .to_string()
+        );
         credentials_file.write_to_file(filepath).unwrap();
 
         // update valid_until fields
@@ -242,7 +269,7 @@ impl RefreshError {
 
 impl fmt::Display for RefreshError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "could not refresh account")
+        write!(f, "{}", self.msg)
     }
 }
 
