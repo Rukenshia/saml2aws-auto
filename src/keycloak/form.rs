@@ -1,4 +1,4 @@
-use scraper::{ElementRef, Html, Selector, node::Element};
+use scraper::{node::Element, ElementRef, Html, Selector};
 
 #[derive(Debug)]
 pub enum FormMethod {
@@ -7,9 +7,16 @@ pub enum FormMethod {
 }
 
 #[derive(Debug)]
+pub struct MFADevice {
+    pub name: String,
+    pub id: String,
+}
+
+#[derive(Debug)]
 pub struct FormInfo {
     pub method: FormMethod,
     pub action: String,
+    pub mfa_devices: Vec<MFADevice>,
 }
 
 impl FormInfo {
@@ -29,12 +36,44 @@ impl FormInfo {
         };
         let action = form.attr("action")?.into();
 
-        Some(FormInfo { method, action })
+        let options: Vec<ElementRef> = doc
+            .select(
+                &Selector::parse(&format!(
+                    "{} select[name=selectedCredentialId] option",
+                    selector
+                ))
+                .unwrap(),
+            )
+            .collect::<Vec<ElementRef>>();
+
+        let mut mfa_devices: Vec<MFADevice> = vec![];
+
+        for option in options {
+            let value: &Element = option.value();
+
+            if value.attr("disabled").is_some() {
+                continue;
+            }
+
+            mfa_devices.push(MFADevice {
+                name: option.text().next().unwrap().to_owned(),
+                id: value.attr("value").unwrap().to_owned(),
+            });
+        }
+
+        trace!("mfa devices: {:?}", mfa_devices);
+
+        Some(FormInfo {
+            method,
+            action,
+            mfa_devices,
+        })
     }
 }
 
 pub fn extract_saml_response(doc: &Html) -> Option<String> {
-    let elements: Vec<ElementRef> = doc.select(&Selector::parse("input[name=\"SAMLResponse\"]").unwrap())
+    let elements: Vec<ElementRef> = doc
+        .select(&Selector::parse("input[name=\"SAMLResponse\"]").unwrap())
         .collect();
 
     if elements.len() == 0 {

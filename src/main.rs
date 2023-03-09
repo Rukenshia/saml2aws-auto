@@ -46,13 +46,9 @@ fn main() {
     let app = App::from_yaml(yaml);
     let matches = app.get_matches();
 
-    let level = match matches.occurrences_of("verbose") {
-        0 => None,
-        1 => Some(LevelFilter::Error),
-        2 => Some(LevelFilter::Warn),
-        3 => Some(LevelFilter::Info),
-        4 => Some(LevelFilter::Debug),
-        _ => Some(LevelFilter::Trace),
+    let level = match matches.is_present("verbose") {
+        false => None,
+        true => Some(LevelFilter::Trace),
     };
 
     let config_path: String = match matches.value_of("config") {

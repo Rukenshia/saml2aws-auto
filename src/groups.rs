@@ -74,6 +74,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             &cfg.idp_url,
             username,
             &password,
+            cfg.mfa_device.as_deref(),
             &mfa,
             true,
         ) {

@@ -12,6 +12,7 @@ pub fn get_assertion_response(
     url: &str,
     username: &str,
     password: &str,
+    mfa_device: Option<&str>,
     token: &str,
     do_aws_page_request: bool,
 ) -> Result<(String, Option<String>), KeycloakError> {
@@ -22,7 +23,15 @@ pub fn get_assertion_response(
 
     if let Ok(form) = form {
         trace!("get_assertion_response.do_login_flow");
-        doc = do_login_flow(&client, cookie_jar, &form.action, username, password, token)?;
+        doc = do_login_flow(
+            &client,
+            cookie_jar,
+            &form.action,
+            username,
+            password,
+            mfa_device,
+            token,
+        )?;
     } else {
         trace!("get_assertion_response.skip_login_flow");
     }
@@ -54,6 +63,7 @@ fn do_login_flow(
     login_url: &str,
     username: &str,
     password: &str,
+    mfa_device: Option<&str>,
     token: &str,
 ) -> Result<String, KeycloakError> {
     trace!("do_login_flow.start");
@@ -66,7 +76,22 @@ fn do_login_flow(
     let totp = get_totp_form(&doc)?;
 
     // Submit TOTP
-    let params = [("otp", token), ("totp", token)];
+    let mut params = vec![("otp", token), ("totp", token)];
+
+    if let Some(mfa_device) = mfa_device {
+        trace!("mfa configured, trying to find device in form");
+
+        if let Some(device) = totp
+            .mfa_devices
+            .iter()
+            .find(|&device| device.name == mfa_device)
+        {
+            trace!("mfa device found with id {}", &device.id);
+            params.push(("selectedCredentialId", &device.id));
+        } else {
+            trace!("mfa device not found, skipping param");
+        }
+    }
     trace!("do_login_flow.submit_form_totp");
     let doc = submit_form(&client, cookie_jar, &totp.action, &params)?;
 
@@ -120,6 +145,10 @@ pub fn submit_form(
         ));
     } else if body.contains("Update password") {
         return Err(KeycloakError::new(KeycloakErrorKind::PasswordUpdateRequired, "You need to update your password in Keycloak before you can login. Please visit the website to change your password."));
+    } else if body
+        .contains("Unexpected error when handling authentication request to identity provider.")
+    {
+        return Err(KeycloakError::new(KeycloakErrorKind::InvalidMFADevice, "A MFA device is configured, but the name could not be found. Double check your config with `saml2aws-auto configure`"));
     }
 
     Ok(body)
@@ -198,7 +227,7 @@ pub fn get_intermediate_response(document: &str) -> Result<(String, FormInfo), K
         trace!("get_intermediate_response.invalid_code");
         return Err(KeycloakError::new(
             KeycloakErrorKind::InvalidToken,
-            "Invalid MFA token",
+            "Invalid MFA token. Check if you are using the correct MFA device. If you have multiple MFA devices set up in Keycloak, update your config with `saml2aws-auto configure`",
         ));
     }
 

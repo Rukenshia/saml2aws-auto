@@ -89,6 +89,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                 &cfg.idp_url,
                 username,
                 &password,
+                cfg.mfa_device.as_deref(),
                 &mfa.trim(),
                 false,
             ) {
@@ -128,6 +129,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             let sts_endpoint = group.sts_endpoint.clone();
             let cookie_jar = cookie_jar.clone();
             let account = account.clone();
+            let mfa_device = cfg.mfa_device.clone();
 
             threads.push(thread::spawn(move || {
                 return refresh_account(
@@ -137,6 +139,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                     &idp_url,
                     &username,
                     &password,
+                    mfa_device.as_deref(),
                     &mfa,
                     force,
                     sts_endpoint,
@@ -291,6 +294,7 @@ fn refresh_account(
     idp_url: &str,
     username: &str,
     password: &str,
+    mfa_device: Option<&str>,
     mfa: &str,
     force: bool,
     sts_endpoint: Option<String>,
@@ -316,6 +320,7 @@ fn refresh_account(
         idp_url,
         username,
         password,
+        mfa_device.as_deref(),
         &mfa.trim(),
         false,
     ) {

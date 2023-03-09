@@ -22,6 +22,7 @@ pub enum KeycloakErrorKind {
     Http,
     InvalidCredentials,
     InvalidToken,
+    InvalidMFADevice,
     FormNotFound,
     PasswordUpdateRequired,
     TermsAndConditionsNotAccepted,

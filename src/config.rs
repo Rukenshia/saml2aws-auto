@@ -19,6 +19,7 @@ pub struct Config {
     filename: String,
     pub idp_url: String,
     pub username: Option<String>,
+    pub mfa_device: Option<String>,
 
     #[serde(skip_serializing)]
     pub password: Option<String>,
@@ -212,6 +213,13 @@ pub fn interactive_create(default: Config) {
         }
     }
 
+    if let Some(mfa_device) = prompt(
+        "IDP MFA Device (leave empty if only using one device)",
+        None,
+    ) {
+        cfg.mfa_device = Some(mfa_device);
+    }
+
     cfg.save().unwrap();
     println!(
         "\nAll set!\nIf you need to reconfigure your details, use {}",
@@ -268,6 +276,7 @@ impl Config {
             username: None,
             password: None,
             groups: HashMap::new(),
+            mfa_device: None,
         }
     }
 

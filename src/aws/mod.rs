@@ -26,7 +26,6 @@ pub fn extract_saml_accounts(
     trace!("html={:?}", body);
     let doc = Html::parse_document(body);
 
-
     let role_selector = Selector::parse("div.saml-role").unwrap();
     let name_selector = Selector::parse("div.saml-account-name").unwrap();
     let arn_selector = Selector::parse("label.saml-role-description").unwrap();
@@ -37,15 +36,15 @@ pub fn extract_saml_accounts(
         .collect();
 
     let mut accounts: Vec<AWSAccountInfo> = vec![];
-    
+
     for div in account_divs {
         let name = div.select(&name_selector).next().unwrap();
 
         for role in div.select(&role_selector) {
             let arn = role.select(&arn_selector).next().unwrap();
-    
+
             let name = re.captures(&name.inner_html()).unwrap()[1].into();
-    
+
             accounts.push(AWSAccountInfo {
                 name: name,
                 arn: arn.value().attr("for").unwrap().into(),
@@ -63,7 +62,7 @@ pub fn extract_saml_accounts(
     // Since the SAML Assertion will *not* include the account alias, the result
     // will be returned with the account number as "name".
     let parsed_assertion = parse_assertion(saml_response_b64)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.description()))?;
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
 
     if parsed_assertion.roles.len() == 0 {
         return Err(io::Error::new(
