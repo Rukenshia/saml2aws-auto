@@ -1,6 +1,6 @@
 [package]
 name = "saml2aws-auto"
-version = "1.12.0"
+version = "1.13.0"
 description = "A simple management tool for AWS credentials when using Keycloak with SAML"
 license-file = "LICENSE"
 authors = ["Jan Christopehrsen <jan@ruken.pw>"]
@@ -28,3 +28,4 @@ fern = "0.5"
 url = "2.1"
 semver = "0.10"
 tabled = { version = "0.7", features = ["color"] }
+itertools = "0.10.5"

@@ -1,6 +1,8 @@
-use std::error::Error;
+use std::{borrow::BorrowMut, error::Error};
 
 use clap::ArgMatches;
+
+use itertools::Itertools;
 
 use chrono::prelude::*;
 use std::collections::HashMap;
@@ -26,7 +28,7 @@ use config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
-    let group_name = matches.value_of("GROUP").unwrap();
+    let mut group_names: Vec<&str> = matches.values_of("GROUP").unwrap().collect();
     let mfa = matches.value_of("mfa");
     let force = matches.is_present("force");
 
@@ -39,37 +41,6 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     };
 
     {
-        let group = match cfg.groups.get_mut(group_name) {
-            Some(g) => g,
-            None => {
-                debug!("match cfg.groups.get_mut(group_name) => None");
-
-                println!(
-                    "\nCould not refresh credentials for {}:\n\n\t{}\n",
-                    group_name.yellow(),
-                    "The specified group does not exist.".red()
-                );
-                return;
-            }
-        };
-
-        if group.accounts.len() == 0 {
-            debug!("group.accounts len is 0");
-
-            println!(
-                "Nothing to refresh. Group {} is empty.",
-                group_name.yellow(),
-            );
-            return;
-        }
-
-        if group.accounts.iter().all(|a| a.session_valid()) && !force {
-            println!(
-                "Nothing to refresh. All accounts have valid sessions. Use --force to overwrite."
-            );
-            return;
-        }
-
         let mfa = match mfa {
             Some(m) => m.into(),
             None => {
@@ -114,135 +85,160 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
 
         trace!("command.cookie_jar={:?}", cookie_jar);
 
-        trace!("command.looping_through_accounts");
+        for (group_name, group) in cfg
+            .groups
+            .iter_mut()
+            .filter(|(name, _)| group_names.iter().any(|n| n == &name.as_str()))
+        {
+            if group.accounts.len() == 0 {
+                debug!("group.accounts len is 0");
 
-        let mut threads: Vec<
-            thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), RefreshError>>,
-        > = vec![];
-
-        for account in &group.accounts {
-            let mfa = mfa.clone();
-            let password = format!("{}", password);
-            let username = format!("{}", username);
-            let idp_url = cfg.idp_url.clone();
-            let session_duration = group.session_duration.clone();
-            let sts_endpoint = group.sts_endpoint.clone();
-            let cookie_jar = cookie_jar.clone();
-            let account = account.clone();
-            let mfa_device = cfg.mfa_device.clone();
-
-            threads.push(thread::spawn(move || {
-                return refresh_account(
-                    session_duration,
-                    &account,
-                    cookie_jar,
-                    &idp_url,
-                    &username,
-                    &password,
-                    mfa_device.as_deref(),
-                    &mfa,
-                    force,
-                    sts_endpoint,
+                println!(
+                    "Nothing to refresh. Group {} is empty.",
+                    group_name.as_str().yellow(),
                 );
-            }));
-        }
-
-        let mut accounts: HashMap<String, Option<DateTime<FixedOffset>>> = HashMap::new();
-
-        let (mut credentials_file, filepath) = load_credentials_file().unwrap();
-
-        #[derive(Debug, Tabled)]
-        struct TableRefreshedAccount {
-            #[tabled(rename = "Account Name")]
-            account_name: String,
-            #[tabled(rename = "Refreshed")]
-            refreshed: String,
-            #[tabled(rename = "Result")]
-            expiration: String,
-        }
-
-        let outputs: Vec<TableRefreshedAccount> = threads
-            .into_iter()
-            .map(|t| match t.join() {
-                Ok(res) => match res {
-                    Ok((output, _)) => {
-                        if let Some(credentials) = output.credentials {
-                            credentials_file
-                                .with_section(Some(output.account.name.as_str()))
-                                .set("aws_access_key_id", credentials.access_key_id.as_str())
-                                .set(
-                                    "aws_secret_access_key",
-                                    credentials.secret_access_key.as_str(),
-                                )
-                                .set("aws_session_token", credentials.session_token.as_str())
-                                .set("expiration", credentials.expiration.as_str());
-                        }
-                        accounts.insert(output.account.arn, output.account.valid_until);
-
-                        let now = Local::now();
-
-                        let expiration = format!(
-                            "valid for {} minutes",
-                            format!(
-                                "{}",
-                                output
-                                    .account
-                                    .valid_until
-                                    .unwrap()
-                                    .signed_duration_since(now)
-                                    .num_minutes()
-                            )
-                            .green()
-                        );
-
-                        TableRefreshedAccount {
-                            account_name: output.account.name,
-                            refreshed: match output.renewed {
-                                true => "✓".green().to_string(),
-                                false => "⨯".bold().red().to_string(),
-                            },
-                            expiration,
-                        }
-                    }
-                    Err(ref e) => TableRefreshedAccount {
-                        account_name: e.account_name.clone(),
-                        refreshed: "⨯".bold().red().to_string(),
-                        expiration: e.to_string().red().to_string(),
-                    },
-                },
-                Err(e) => TableRefreshedAccount {
-                    account_name: "unknown".to_string(),
-                    refreshed: "⨯".bold().red().to_string(),
-                    expiration: format!("{:?}", e),
-                },
-            })
-            .collect();
-
-        print!(
-            "\n\n{}",
-            Table::new(outputs)
-                .with(Style::modern())
-                .with(
-                    Modify::new(Columns::single(0).and(Columns::single(2))).with(Alignment::left())
-                )
-                .to_string()
-        );
-        credentials_file.write_to_file(filepath).unwrap();
-
-        // update valid_until fields
-        for account in &mut group.accounts {
-            if !accounts.contains_key(&account.arn) {
                 continue;
             }
 
-            account.valid_until = *accounts.get(&account.arn).unwrap();
-        }
+            if group.accounts.iter().all(|a| a.session_valid()) && !force {
+                println!(
+                "Nothing to refresh. All accounts have valid sessions. Use --force to overwrite.");
+                continue;
+            }
 
-        println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", group_name.yellow());
-        println!(
-            "\nExample:\n\n\taws --profile {} s3 ls\n",
-            group.accounts[0].name.as_str().yellow(),
-        );
+            trace!("command.looping_through_accounts");
+
+            let mut threads: Vec<
+                thread::JoinHandle<Result<(RefreshAccountOutput, CookieJar), RefreshError>>,
+            > = vec![];
+
+            for account in &group.accounts {
+                let mfa = mfa.clone();
+                let password = format!("{}", password);
+                let username = format!("{}", username);
+                let idp_url = cfg.idp_url.clone();
+                let session_duration = group.session_duration.clone();
+                let sts_endpoint = group.sts_endpoint.clone();
+                let cookie_jar = cookie_jar.clone();
+                let account = account.clone();
+                let mfa_device = cfg.mfa_device.clone();
+
+                threads.push(thread::spawn(move || {
+                    return refresh_account(
+                        session_duration,
+                        &account,
+                        cookie_jar,
+                        &idp_url,
+                        &username,
+                        &password,
+                        mfa_device.as_deref(),
+                        &mfa,
+                        force,
+                        sts_endpoint,
+                    );
+                }));
+            }
+
+            let mut accounts: HashMap<String, Option<DateTime<FixedOffset>>> = HashMap::new();
+
+            let (mut credentials_file, filepath) = load_credentials_file().unwrap();
+
+            #[derive(Debug, Tabled)]
+            struct TableRefreshedAccount {
+                #[tabled(rename = "Account Name")]
+                account_name: String,
+                #[tabled(rename = "Refreshed")]
+                refreshed: String,
+                #[tabled(rename = "Result")]
+                expiration: String,
+            }
+
+            let outputs: Vec<TableRefreshedAccount> = threads
+                .into_iter()
+                .map(|t| match t.join() {
+                    Ok(res) => match res {
+                        Ok((output, _)) => {
+                            if let Some(credentials) = output.credentials {
+                                credentials_file
+                                    .with_section(Some(output.account.name.as_str()))
+                                    .set("aws_access_key_id", credentials.access_key_id.as_str())
+                                    .set(
+                                        "aws_secret_access_key",
+                                        credentials.secret_access_key.as_str(),
+                                    )
+                                    .set("aws_session_token", credentials.session_token.as_str())
+                                    .set("expiration", credentials.expiration.as_str());
+                            }
+                            accounts.insert(output.account.arn, output.account.valid_until);
+
+                            let now = Local::now();
+
+                            let expiration = format!(
+                                "valid for {} minutes",
+                                format!(
+                                    "{}",
+                                    output
+                                        .account
+                                        .valid_until
+                                        .unwrap()
+                                        .signed_duration_since(now)
+                                        .num_minutes()
+                                )
+                                .green()
+                            );
+
+                            TableRefreshedAccount {
+                                account_name: output.account.name,
+                                refreshed: match output.renewed {
+                                    true => "✓".green().to_string(),
+                                    false => "⨯".bold().red().to_string(),
+                                },
+                                expiration,
+                            }
+                        }
+                        Err(ref e) => TableRefreshedAccount {
+                            account_name: e.account_name.clone(),
+                            refreshed: "⨯".bold().red().to_string(),
+                            expiration: e.to_string().red().to_string(),
+                        },
+                    },
+                    Err(e) => TableRefreshedAccount {
+                        account_name: "unknown".to_string(),
+                        refreshed: "⨯".bold().red().to_string(),
+                        expiration: format!("{:?}", e),
+                    },
+                })
+                .collect();
+
+            print!(
+                "\n\n{}",
+                Table::new(outputs)
+                    .with(Style::modern())
+                    .with(
+                        Modify::new(Columns::single(0).and(Columns::single(2)))
+                            .with(Alignment::left())
+                    )
+                    .to_string()
+            );
+            credentials_file.write_to_file(filepath).unwrap();
+
+            let example_account = group.accounts[0].name.clone();
+
+            // update valid_until fields
+            for mut account in &mut group.accounts {
+                if !accounts.contains_key(&account.arn) {
+                    continue;
+                }
+
+                account.valid_until = *accounts.get(&account.arn).unwrap();
+            }
+
+            println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", group_name.clone().yellow());
+            println!(
+                "\nExample:\n\n\taws --profile {} s3 ls\n",
+                example_account.as_str().yellow(),
+            );
+        }
     }
 
     cfg.save().unwrap();

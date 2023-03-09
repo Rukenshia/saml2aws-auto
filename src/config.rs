@@ -27,14 +27,14 @@ pub struct Config {
     pub groups: HashMap<String, Group>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Group {
     pub session_duration: Option<i64>,
     pub sts_endpoint: Option<String>,
     pub accounts: Vec<Account>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Account {
     pub name: String,
     pub arn: String,
