@@ -141,7 +141,7 @@ pub fn password_prompt(question: &str, default: Option<&str>) -> Option<String> 
     Some(password.trim().into())
 }
 
-pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
+pub fn prompt(question: &str, default: Option<&str>, allow_empty: bool) -> Option<String> {
     let mut buf = String::new();
 
     ask_question(question, default);
@@ -154,7 +154,13 @@ pub fn prompt(question: &str, default: Option<&str>) -> Option<String> {
     if buf == LINE_ENDING {
         return match default {
             Some(default) => Some(default.into()),
-            None => prompt(question, default),
+            None => {
+                if allow_empty {
+                    return None;
+                }
+
+                return prompt(question, default, allow_empty);
+            }
         };
     }
 
@@ -171,7 +177,7 @@ pub fn interactive_create(default: Config) {
 
     let mut cfg = default;
 
-    if let Some(idp_url) = prompt("IDP URL", Some(&cfg.idp_url)) {
+    if let Some(idp_url) = prompt("IDP URL", Some(&cfg.idp_url), false) {
         cfg.idp_url = idp_url.into();
     }
 
@@ -181,6 +187,7 @@ pub fn interactive_create(default: Config) {
             Some(ref s) => Some(s),
             None => None,
         },
+        false,
     ) {
         cfg.username = Some(username);
         if let Some(password) = password_prompt(
@@ -213,12 +220,11 @@ pub fn interactive_create(default: Config) {
         }
     }
 
-    if let Some(mfa_device) = prompt(
+    cfg.mfa_device = prompt(
         "IDP MFA Device (leave empty if only using one device)",
         None,
-    ) {
-        cfg.mfa_device = Some(mfa_device);
-    }
+        true,
+    );
 
     cfg.save().unwrap();
     println!(

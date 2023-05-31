@@ -36,7 +36,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
         let mfa = matches
             .value_of("mfa")
             .map(|m| m.into())
-            .or_else(|| prompt("MFA Token", Some("000000")))
+            .or_else(|| prompt("MFA Token", Some("000000"), false))
             .expect("No MFA Token provided");
 
         let session_duration = matches
@@ -108,7 +108,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             println!("\t{}", "WARNING".yellow());
             println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
 
-            let account_name = prompt("Account name", None).unwrap();
+            let account_name = prompt("Account name", None, false).unwrap();
 
             accounts = vec![Account {
                 name: account_name,

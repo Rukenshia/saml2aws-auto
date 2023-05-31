@@ -46,7 +46,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             None => {
                 debug!("mfa flag not set, no valid session");
 
-                prompt("MFA Token", Some("000000")).unwrap()
+                prompt("MFA Token", Some("000000"), false).unwrap()
             }
         };
 
