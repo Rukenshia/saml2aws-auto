@@ -1,8 +1,6 @@
-use std::{borrow::BorrowMut, error::Error};
+use std::error::Error;
 
 use clap::ArgMatches;
-
-use itertools::Itertools;
 
 use chrono::prelude::*;
 use std::collections::HashMap;
@@ -28,7 +26,7 @@ use config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
-    let mut group_names: Vec<&str> = matches.values_of("GROUP").unwrap().collect();
+    let group_names: Vec<&str> = matches.values_of("GROUP").unwrap().collect();
     let mfa = matches.value_of("mfa");
     let force = matches.is_present("force");
 
@@ -39,6 +37,19 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
         Some(s) => s.to_string(),
         None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
     };
+
+    // If all credentials are valid, skip refresh entirely
+    if cfg
+        .groups
+        .iter_mut()
+        .filter(|(name, _)| group_names.iter().any(|n| n == &name.as_str()))
+        .map(|(_, group)| group.accounts.iter().all(|a| a.session_valid()))
+        .all(|b| b)
+        && !force
+    {
+        println!("Nothing to refresh, all credentials are valid. Use --force to overwrite.");
+        return;
+    }
 
     {
         let mfa = match mfa {
