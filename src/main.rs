@@ -36,6 +36,8 @@ mod update;
 
 use std::io;
 
+extern crate semver;
+
 use clap::App;
 use crossterm::style::Stylize;
 use log::LevelFilter;

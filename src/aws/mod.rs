@@ -5,13 +5,15 @@ use super::dirs;
 use super::ini;
 use super::regex;
 
+use anyhow::anyhow;
 use scraper::{Html, Selector};
 
 pub mod assume_role;
 pub mod credentials;
 pub mod xml;
 
-use saml::parse_assertion;
+use crate::saml::parse_assertion;
+use log::trace;
 
 #[derive(Debug)]
 pub struct AWSAccountInfo {
@@ -22,14 +24,17 @@ pub struct AWSAccountInfo {
 pub fn extract_saml_accounts(
     body: &str,
     saml_response_b64: &str,
-) -> Result<Vec<AWSAccountInfo>, io::Error> {
+) -> Result<Vec<AWSAccountInfo>, anyhow::Error> {
     trace!("html={:?}", body);
     let doc = Html::parse_document(body);
 
-    let role_selector = Selector::parse("div.saml-role").unwrap();
-    let name_selector = Selector::parse("div.saml-account-name").unwrap();
-    let arn_selector = Selector::parse("label.saml-role-description").unwrap();
-    let re = regex::Regex::new(r"Account: (.*?) \(").unwrap();
+    let role_selector = Selector::parse("div.saml-role")
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{:?}", e)))?;
+    let name_selector = Selector::parse("div.saml-account-name")
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{:?}", e)))?;
+    let arn_selector = Selector::parse("label.saml-role-description")
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{:?}", e)))?;
+    let re = regex::Regex::new(r"Account: (.*?) \(")?;
 
     let account_divs: Vec<scraper::ElementRef> = doc
         .select(&Selector::parse("fieldset > div.saml-account").unwrap())
@@ -38,12 +43,25 @@ pub fn extract_saml_accounts(
     let mut accounts: Vec<AWSAccountInfo> = vec![];
 
     for div in account_divs {
-        let name = div.select(&name_selector).next().unwrap();
+        let Some(name) = div.select(&name_selector).next() else {
+            continue;
+        };
 
         for role in div.select(&role_selector) {
-            let arn = role.select(&arn_selector).next().unwrap();
+            let Some(arn) = role.select(&arn_selector).next() else {
+                continue;
+            };
 
-            let name = re.captures(&name.inner_html()).unwrap()[1].into();
+            let inner_html = name.inner_html();
+            let Some(captures) = re.captures(&inner_html) else {
+                continue;
+            };
+
+            let name = captures
+                .get(1)
+                .ok_or(anyhow!("Could not extract account name"))?
+                .as_str()
+                .into();
 
             accounts.push(AWSAccountInfo {
                 name: name,
@@ -65,10 +83,7 @@ pub fn extract_saml_accounts(
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
 
     if parsed_assertion.roles.len() == 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "No role was found in the HTML or SAML Assertion",
-        ));
+        return Err(anyhow!("No role was found in the HTML or SAML Assertion"));
     }
 
     // Take the first account

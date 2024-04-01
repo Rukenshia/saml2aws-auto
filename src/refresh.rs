@@ -8,21 +8,19 @@ use std::fmt;
 use std::str::FromStr;
 use std::thread;
 
-use aws::assume_role::assume_role;
-use aws::credentials::load_credentials_file;
-use aws::xml::Credentials;
-use config::prompt;
+use crate::aws::{assume_role::assume_role, credentials::load_credentials_file, xml::Credentials};
+use crate::config::prompt;
+use crate::keycloak::login::get_assertion_response;
+use crate::keycloak::KeycloakErrorKind;
+use crate::saml::parse_assertion;
 use cookie::CookieJar;
 use crossterm::style::Stylize;
-use keycloak::login::get_assertion_response;
-use keycloak::KeycloakErrorKind;
-use saml::parse_assertion;
 use tabled::{
     object::{Columns, Object},
     Alignment, Modify, Style, Table, Tabled,
 };
 
-use config;
+use crate::config;
 
 /// Returns the MFA token. If it is provided via the input, it will be unwrapped and
 pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
@@ -236,7 +234,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             let example_account = group.accounts[0].name.clone();
 
             // update valid_until fields
-            for mut account in &mut group.accounts {
+            for account in &mut group.accounts {
                 if !accounts.contains_key(&account.arn) {
                     continue;
                 }

@@ -5,7 +5,7 @@ use super::scraper::Html;
 use super::form::{extract_saml_response, FormInfo};
 use super::mfa::get_totp_form;
 use super::{KeycloakError, KeycloakErrorKind};
-use client;
+use crate::client;
 
 pub fn get_assertion_response(
     cookie_jar: &mut CookieJar,

@@ -1,5 +1,5 @@
 use super::client;
-use aws::xml::{AssumeRoleResponse, AssumeRoleResult, Credentials};
+use crate::aws::xml::{AssumeRoleResponse, AssumeRoleResult, Credentials};
 use reqwest::blocking::Response;
 use serde_xml_rs;
 use std::error::Error;

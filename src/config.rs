@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use std::panic;
 use std::path::Path;
 
+use anyhow::anyhow;
 use chrono::prelude::*;
 
 use crossterm::style::Stylize;
@@ -53,7 +54,7 @@ pub fn default_filename() -> String {
     format!("{}", path.to_str().unwrap())
 }
 
-pub fn load_or_default(path: &str) -> Result<Config, io::Error> {
+pub fn load_or_default(path: &str) -> Result<Config, anyhow::Error> {
     if Path::new(path).exists() {
         let mut f = File::open(path)?;
 
@@ -74,7 +75,7 @@ pub fn load_or_default(path: &str) -> Result<Config, io::Error> {
 
                 Ok(cfg)
             }
-            Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+            Err(e) => Err(anyhow!(e)),
         }
     } else {
         Ok(Config::default(path))

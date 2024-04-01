@@ -4,6 +4,7 @@ version = "1.13.2"
 description = "A simple management tool for AWS credentials when using Keycloak with SAML"
 license-file = "LICENSE"
 authors = ["Jan Christopehrsen <jan@ruken.pw>"]
+edition = "2021"
 
 [dependencies]
 clap = { version = "3", features = ["yaml"] }
@@ -29,3 +30,4 @@ url = "2.1"
 semver = "0.10"
 tabled = { version = "0.7", features = ["color"] }
 itertools = "0.10.5"
+anyhow = "1.0.81"

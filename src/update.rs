@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use client;
-use reqwest;
+use crate::client;
 
-extern crate semver;
+use reqwest;
+use semver;
 
 #[derive(Deserialize)]
 pub struct VersionInfo {
