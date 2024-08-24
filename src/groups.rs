@@ -2,146 +2,134 @@ use aws::{extract_saml_accounts, AWSAccountInfo};
 use config;
 use config::{prompt, Account, Group};
 use keycloak::login::get_assertion_response;
-use refresh;
 
 use chrono::prelude::*;
-use clap::ArgMatches;
 use cookie::CookieJar;
 use crossterm::style::Stylize;
 use std::io;
 use std::io::prelude::*;
 
-pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
-    if let Some(_) = matches.subcommand_matches("list") {
-        list(&cfg)
-    } else if let Some(matches) = matches.subcommand_matches("delete") {
-        let name = matches.value_of("GROUP").unwrap();
+use crate::cli::{AddGroupArgs, GroupCommands};
 
-        delete(cfg, name)
-    } else if let Some(matches) = matches.subcommand_matches("refresh") {
-        refresh::command(cfg, matches);
-    } else if let Some(matches) = matches.subcommand_matches("add") {
-        let name = matches.value_of("NAME").unwrap();
-        let role = matches.value_of("role").unwrap();
-        let append = matches.is_present("append");
+pub fn command(cfg: &mut config::Config, command: &GroupCommands) {
+    match command {
+        GroupCommands::List => list(cfg),
+        GroupCommands::Delete { group } => delete(cfg, group),
+        GroupCommands::Add(args) => add_group(cfg, args),
+    }
+}
 
-        let cfg_username = &cfg.username.as_ref().unwrap();
-        let username = matches.value_of("username").unwrap_or(cfg_username);
+fn add_group(cfg: &mut config::Config, args: &AddGroupArgs) {
+    let cfg_username = &cfg.username.as_ref().unwrap();
+    let username = args.username.as_deref().unwrap_or(cfg_username);
 
-        let password = match matches.value_of("password") {
-            Some(s) => s.to_owned(),
-            None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
-        };
+    let password = match &args.password {
+        Some(s) => s.to_owned(),
+        None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
+    };
 
-        let mfa = matches
-            .value_of("mfa")
-            .map(|m| m.into())
-            .or_else(|| prompt("MFA Token", Some("000000"), false))
-            .expect("No MFA Token provided");
+    let mfa = args
+        .mfa
+        .clone()
+        .or_else(|| prompt("MFA Token", Some("000000"), false))
+        .expect("No MFA Token provided");
 
-        let session_duration = matches
-            .value_of("session_duration")
-            .map(|s| s.parse().ok().unwrap());
+    if args.prefix.is_some() && args.accounts.is_some() {
+        println!("Cannot specify both --accounts and --prefix");
+        return;
+    }
 
-        let sts_endpoint = matches.value_of("sts_endpoint").map(|s| s.into());
+    if args.prefix.is_none() && args.accounts.is_none() {
+        println!(
+            "\nCould not add group {}:\n\n\t{}\n",
+            args.name.clone().yellow(),
+            "Must specify either --prefix or --accounts flag".red(),
+        );
+        return;
+    }
 
-        let prefix = matches.value_of("prefix");
-        let account_names = matches.values_of("accounts");
+    let mut accounts: Vec<Account> = vec![];
 
-        if prefix.is_some() && account_names.is_some() {
-            println!("Cannot specify both --accounts and --prefix");
+    print!("Listing allowed roles for your account\t");
+    io::stdout().flush().unwrap();
+    trace!("command.get_assertion_response");
+
+    let mut cookie_jar = CookieJar::new();
+    let (saml_response, web_response) = match get_assertion_response(
+        &mut cookie_jar,
+        &cfg.idp_url,
+        username,
+        &password,
+        cfg.mfa_device.as_deref(),
+        &mfa,
+        true,
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            trace!("command.get_assertion_response.err");
+            error!("{:?}", e);
+            println!("{}", "FAIL".red());
+            println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
             return;
         }
+    };
 
-        if prefix.is_none() && account_names.is_none() {
-            println!(
-                "\nCould not add group {}:\n\n\t{}\n",
-                name.yellow(),
-                "Must specify either --prefix or --accounts flag".red(),
-            );
+    trace!("command.extract_saml_accounts");
+    let aws_list = match extract_saml_accounts(&web_response.unwrap(), &saml_response) {
+        Ok(l) => l,
+        Err(e) => {
+            trace!("command.extract_saml_accounts.err");
+            error!("{:?}", e);
+            println!("{}", "FAIL".red());
+            println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
             return;
         }
+    };
 
-        let mut accounts: Vec<Account> = vec![];
+    if aws_list.len() == 1 {
+        // This is a special case because the user will never see a role list form
+        // on the web console. We will now add a single account with the account id
+        // and ask the user for a name.
 
-        print!("Listing allowed roles for your account\t");
-        io::stdout().flush().unwrap();
-        trace!("command.get_assertion_response");
+        println!("\t{}", "WARNING".yellow());
+        println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
 
-        let mut cookie_jar = CookieJar::new();
-        let (saml_response, web_response) = match get_assertion_response(
-            &mut cookie_jar,
-            &cfg.idp_url,
-            username,
-            &password,
-            cfg.mfa_device.as_deref(),
-            &mfa,
-            true,
-        ) {
-            Ok(r) => r,
-            Err(e) => {
-                trace!("command.get_assertion_response.err");
-                error!("{:?}", e);
-                println!("{}", "FAIL".red());
-                println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
-                return;
-            }
-        };
+        let account_name = prompt("Account name", None, false).unwrap();
 
-        trace!("command.extract_saml_accounts");
-        let aws_list = match extract_saml_accounts(&web_response.unwrap(), &saml_response) {
-            Ok(l) => l,
-            Err(e) => {
-                trace!("command.extract_saml_accounts.err");
-                error!("{:?}", e);
-                println!("{}", "FAIL".red());
-                println!("\nCould not add group:\n\n\t{}\n", e.to_string().red());
-                return;
-            }
-        };
-
-        if aws_list.len() == 1 {
-            // This is a special case because the user will never see a role list form
-            // on the web console. We will now add a single account with the account id
-            // and ask the user for a name.
-
-            println!("\t{}", "WARNING".yellow());
-            println!("\nYou seem to only have access to a single AWS Account. The name could not be found automatically, so please enter an account name manually.");
-
-            let account_name = prompt("Account name", None, false).unwrap();
-
-            accounts = vec![Account {
-                name: account_name,
-                arn: aws_list[0].arn.clone(),
-                valid_until: None,
-            }];
-        } else {
-            if let Some(prefix) = prefix {
-                accounts = get_acocunts_prefixed_by(&aws_list, prefix, role);
-            }
-            if let Some(account_names) = account_names {
-                accounts = get_accounts_by_names(
-                    &aws_list,
-                    account_names.map(|a| a.into()).collect(),
-                    role,
-                );
-            }
+        accounts = vec![Account {
+            name: account_name,
+            arn: aws_list[0].arn.clone(),
+            valid_until: None,
+        }];
+    } else {
+        if let Some(prefix) = &args.prefix {
+            accounts = get_accounts_prefixed_by(&aws_list, prefix, &args.role);
         }
-
-        if accounts.len() == 0 {
-            println!("\t{}", "WARNING".yellow());
-            println!("\nNo accounts were found with the given parameters. Possible errors:");
-            println!("\t- Wrong prefix/accounts used");
-            println!("\t- Wrong role used");
-
-            trace!("aws_list");
-            for account in &aws_list {
-                trace!("aws_list name={} arn={}", account.name, account.arn);
-            }
-        } else {
-            println!("\t{}", "SUCCESS".green());
-            add(cfg, name, session_duration, accounts, append, sts_endpoint)
+        if let Some(account_names) = &args.accounts {
+            accounts = get_accounts_by_names(&aws_list, account_names, &args.role);
         }
+    }
+
+    if accounts.is_empty() {
+        println!("\t{}", "WARNING".yellow());
+        println!("\nNo accounts were found with the given parameters. Possible errors:");
+        println!("\t- Wrong prefix/accounts used");
+        println!("\t- Wrong role used");
+
+        trace!("aws_list");
+        for account in &aws_list {
+            trace!("aws_list name={} arn={}", account.name, account.arn);
+        }
+    } else {
+        println!("\t{}", "SUCCESS".green());
+        add(
+            cfg,
+            &args.name,
+            args.session_duration,
+            accounts,
+            args.append,
+            args.sts_endpoint.clone(),
+        )
     }
 }
 
@@ -277,13 +265,13 @@ fn add(
     println!("\nGroup configuration updated");
 }
 
-fn get_acocunts_prefixed_by(
+fn get_accounts_prefixed_by(
     accounts: &Vec<AWSAccountInfo>,
     prefix: &str,
     role_name: &str,
 ) -> Vec<Account> {
     accounts
-        .into_iter()
+        .iter()
         .filter(|a| a.name.starts_with(prefix))
         .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
         .map(|a| Account {
@@ -296,12 +284,12 @@ fn get_acocunts_prefixed_by(
 
 fn get_accounts_by_names(
     accounts: &Vec<AWSAccountInfo>,
-    names: Vec<String>,
+    names: &Vec<String>,
     role_name: &str,
 ) -> Vec<Account> {
     accounts
-        .into_iter()
-        .filter(|a| names.iter().find(|name| *name == &a.name).is_some())
+        .iter()
+        .filter(|a| names.iter().any(|name| name == &a.name))
         .filter(|a| a.arn.ends_with(&format!("role/{}", role_name)))
         .map(|a| Account {
             name: a.name.clone(),

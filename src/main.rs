@@ -1,5 +1,4 @@
 extern crate chrono;
-#[macro_use]
 extern crate clap;
 extern crate crossterm;
 extern crate regex;
@@ -26,6 +25,7 @@ extern crate tabled;
 extern crate url;
 
 mod aws;
+mod cli;
 pub mod client;
 mod config;
 mod groups;
@@ -34,25 +34,22 @@ mod refresh;
 mod saml;
 mod update;
 
-use std::io;
-
-use clap::App;
+use clap::Parser;
+use cli::Cli;
 use crossterm::style::Stylize;
 use log::LevelFilter;
 
 fn main() {
     openssl_probe::init_ssl_cert_env_vars();
 
-    let yaml = load_yaml!("cli.yml");
-    let app = App::from_yaml(yaml);
-    let matches = app.get_matches();
+    let cli = Cli::parse();
 
-    let level = match matches.is_present("verbose") {
+    let level = match cli.verbose {
         false => None,
         true => Some(LevelFilter::Trace),
     };
 
-    let config_path: String = match matches.value_of("config") {
+    let config_path: String = match cli.config {
         Some(s) => s.to_owned(),
         None => config::default_filename(),
     };
@@ -76,7 +73,7 @@ fn main() {
 
     // Check for a new version
     if let Ok(update::VersionComparison::HasNewer) =
-        update::compare_version(yaml["version"].as_str().unwrap())
+        update::compare_version(env!("CARGO_PKG_VERSION"))
     {
         println!(
             "\n\t{}",
@@ -86,31 +83,23 @@ fn main() {
         println!("");
     }
 
-    if let Some(_) = matches.subcommand_matches("version") {
-        App::from_yaml(yaml)
-            .write_long_version(&mut io::stdout())
-            .unwrap();
+    if !config::check_or_interactive_create(&config_path, cli.skip_password_manager) {
         return;
     }
 
-    if !config::check_or_interactive_create(
-        &config_path,
-        matches.is_present("skip-password-manager"),
-    ) {
-        return;
-    }
-
-    let mut config = config::load_or_default(&config_path)
-        .expect("Could not read config, please open an issue on GitHub");
-
-    if let Some(_) = matches.subcommand_matches("configure") {
-        config::interactive_create(config);
-        return;
-    }
-
-    if let Some(matches) = matches.subcommand_matches("groups") {
-        groups::command(&mut config, matches)
-    } else if let Some(matches) = matches.subcommand_matches("refresh") {
-        refresh::command(&mut config, matches)
+    match cli.command {
+        cli::Commands::Configure => {
+            config::interactive_create(config::Config::default(&config_path));
+        }
+        cli::Commands::Groups { command } => groups::command(
+            &mut config::load_or_default(&config_path).unwrap(),
+            &command,
+        ),
+        cli::Commands::Refresh(args) => {
+            refresh::command(&mut config::load_or_default(&config_path).unwrap(), &args)
+        }
+        cli::Commands::Version => {
+            println!("saml2aws-auto {}", env!("CARGO_PKG_VERSION"));
+        }
     }
 }

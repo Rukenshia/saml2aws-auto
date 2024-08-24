@@ -1,7 +1,5 @@
 use std::error::Error;
 
-use clap::ArgMatches;
-
 use chrono::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
@@ -23,16 +21,15 @@ use saml::parse_assertion;
 
 use config;
 
-/// Returns the MFA token. If it is provided via the input, it will be unwrapped and
-pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
-    let group_names: Vec<&str> = matches.values_of("GROUP").unwrap().collect();
-    let mfa = matches.value_of("mfa");
-    let force = matches.is_present("force");
+use crate::cli::RefreshArgs;
+
+pub fn command(cfg: &mut config::Config, args: &RefreshArgs) {
+    let force = args.force;
 
     let cfg_username = cfg.username.as_ref().unwrap();
-    let username = matches.value_of("username").unwrap_or(&cfg_username);
+    let username = args.username.as_deref().unwrap_or(cfg_username);
 
-    let password = match matches.value_of("password") {
+    let password = match &args.password {
         Some(s) => s.to_string(),
         None => cfg.password.as_ref().expect("Password could not be found, please run saml2aws-auto configure or provide a password by supplying the --password flag").clone(),
     };
@@ -41,7 +38,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     if cfg
         .groups
         .iter_mut()
-        .filter(|(name, _)| group_names.iter().any(|n| n == &name.as_str()))
+        .filter(|(name, _)| args.groups.iter().any(|n| n == *name))
         .map(|(_, group)| group.accounts.iter().all(|a| a.session_valid()))
         .all(|b| b)
         && !force
@@ -51,11 +48,10 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
     }
 
     {
-        let mfa = match mfa {
-            Some(m) => m.into(),
+        let mfa = match &args.mfa {
+            Some(m) => m.to_string(),
             None => {
                 debug!("mfa flag not set, no valid session");
-
                 prompt("MFA Token", Some("000000"), false).unwrap()
             }
         };
@@ -98,9 +94,9 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
         for (group_name, group) in cfg
             .groups
             .iter_mut()
-            .filter(|(name, _)| group_names.iter().any(|n| n == &name.as_str()))
+            .filter(|(name, _)| args.groups.iter().any(|n| n == *name))
         {
-            if group.accounts.len() == 0 {
+            if group.accounts.is_empty() {
                 debug!("group.accounts len is 0");
 
                 println!(
@@ -124,17 +120,17 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
 
             for account in &group.accounts {
                 let mfa = mfa.clone();
-                let password = format!("{}", password);
-                let username = format!("{}", username);
+                let password = password.clone();
+                let username = username.to_string();
                 let idp_url = cfg.idp_url.clone();
-                let session_duration = group.session_duration.clone();
+                let session_duration = group.session_duration;
                 let sts_endpoint = group.sts_endpoint.clone();
                 let cookie_jar = cookie_jar.clone();
                 let account = account.clone();
                 let mfa_device = cfg.mfa_device.clone();
 
                 threads.push(thread::spawn(move || {
-                    return refresh_account(
+                    refresh_account(
                         session_duration,
                         &account,
                         cookie_jar,
@@ -145,7 +141,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                         &mfa,
                         force,
                         sts_endpoint,
-                    );
+                    )
                 }));
             }
 
@@ -199,9 +195,10 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
 
                             TableRefreshedAccount {
                                 account_name: output.account.name,
-                                refreshed: match output.renewed {
-                                    true => "✓".green().to_string(),
-                                    false => "⨯".bold().red().to_string(),
+                                refreshed: if output.renewed {
+                                    "✓".green().to_string()
+                                } else {
+                                    "⨯".bold().red().to_string()
                                 },
                                 expiration,
                             }
@@ -233,11 +230,9 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
 
             // update valid_until fields
             for account in &mut group.accounts {
-                if !accounts.contains_key(&account.arn) {
-                    continue;
+                if let Some(valid_until) = accounts.get(&account.arn) {
+                    account.valid_until = *valid_until;
                 }
-
-                account.valid_until = *accounts.get(&account.arn).unwrap();
             }
 
             println!("\nRefreshed group {}. To use them in the AWS cli, apply the --profile flag with the name of the account.", group_name.clone().yellow());
