@@ -1,6 +1,6 @@
 use scraper::{node::Element, ElementRef, Html, Selector};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FormMethod {
     GET,
     POST,

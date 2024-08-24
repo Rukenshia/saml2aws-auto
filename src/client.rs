@@ -16,8 +16,8 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
             url.username()
         );
         trace!(
-            "get_proxied_client_builder.http_proxy.password='{:?}'",
-            url.password()
+            "get_proxied_client_builder.http_proxy.password.length='{}'",
+            url.password().map_or(0, |p| p.len())
         );
         trace!("get_proxied_client_builder.http_proxy.url='{}'", http_proxy);
 
@@ -53,8 +53,8 @@ pub fn get_proxied_client_builder() -> ClientBuilder {
             url.username()
         );
         trace!(
-            "get_proxied_client_builder.https_proxy.password='{:?}'",
-            url.password()
+            "get_proxied_client_builder.https_proxy.password.length='{}'",
+            url.password().map_or(0, |p| p.len())
         );
         trace!(
             "get_proxied_client_builder.https_proxy.url='{}'",

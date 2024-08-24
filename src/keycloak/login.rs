@@ -1,3 +1,5 @@
+use crate::keycloak::form::FormMethod;
+
 use super::cookie::{self, CookieJar};
 use super::reqwest;
 use super::scraper::Html;
@@ -74,6 +76,13 @@ fn do_login_flow(
     let doc = submit_form(&client, cookie_jar, login_url, &params)?;
     trace!("do_login_flow.get_totp_form");
     let totp = get_totp_form(&doc)?;
+
+    if totp.method == FormMethod::GET {
+        return Err(KeycloakError::new(
+            KeycloakErrorKind::InvalidForm,
+            "GET method not supported",
+        ));
+    }
 
     // Submit TOTP
     let mut params = vec![("otp", token), ("totp", token)];
@@ -215,6 +224,13 @@ pub fn get_login_form(document: &str) -> Result<FormInfo, KeycloakError> {
             ));
         }
     };
+
+    if form.method == FormMethod::GET {
+        return Err(KeycloakError::new(
+            KeycloakErrorKind::InvalidForm,
+            "GET method not supported",
+        ));
+    }
 
     trace!("get_login_form.ok");
     Ok(form)

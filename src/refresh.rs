@@ -236,7 +236,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
             let example_account = group.accounts[0].name.clone();
 
             // update valid_until fields
-            for mut account in &mut group.accounts {
+            for account in &mut group.accounts {
                 if !accounts.contains_key(&account.arn) {
                     continue;
                 }

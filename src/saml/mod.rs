@@ -4,12 +4,6 @@ use super::base64;
 use super::serde_xml_rs;
 
 #[derive(Deserialize, Debug)]
-pub struct SAML {
-    #[serde(rename = "Response")]
-    pub response: SAMLResponse,
-}
-
-#[derive(Deserialize, Debug)]
 #[serde(rename = "Response")]
 pub struct SAMLResponse {
     #[serde(rename = "Assertion")]
@@ -37,6 +31,7 @@ pub struct Attribute {
     pub friendly_name: String,
 
     #[serde(rename = "Name", default)]
+    #[allow(dead_code)]
     pub name: String,
 }
 
@@ -62,6 +57,8 @@ pub struct Role {
     pub principal_arn: String,
 
     pub account_id: String,
+
+    #[allow(dead_code)]
     pub role_name: String,
 }
 
@@ -70,7 +67,8 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
 
     // https://github.com/RReverser/serde-xml-rs/issues/64
     // remove all namespaces (this is ugly)
-    buf = buf.replace("<saml:", "<")
+    buf = buf
+        .replace("<saml:", "<")
         .replace("<samlp:", "<")
         .replace("xmlns:", "")
         .replace("xsi:", "")
@@ -95,19 +93,21 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
                 assertion.session_duration =
                     i64::from_str(&attribute.values.get(0).unwrap().value.clone()).unwrap();
             }
-            "Role" => for value in &attribute.values {
-                let split = value.value.split(",").collect::<Vec<&str>>();
-                let arn: String = split[0].into();
-                let principal_arn = split[1].into();
-                let (account_id, role_name) = arn_to_role_info(&arn);
+            "Role" => {
+                for value in &attribute.values {
+                    let split = value.value.split(",").collect::<Vec<&str>>();
+                    let arn: String = split[0].into();
+                    let principal_arn = split[1].into();
+                    let (account_id, role_name) = arn_to_role_info(&arn);
 
-                assertion.roles.push(Role {
-                    arn: arn,
-                    principal_arn: principal_arn,
-                    account_id: account_id,
-                    role_name: role_name,
-                });
-            },
+                    assertion.roles.push(Role {
+                        arn: arn,
+                        principal_arn: principal_arn,
+                        account_id: account_id,
+                        role_name: role_name,
+                    });
+                }
+            }
             _ => {}
         };
     }
@@ -144,3 +144,4 @@ mod tests {
         assert_eq!(role_name, "ARoleName");
     }
 }
+

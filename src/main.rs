@@ -84,7 +84,7 @@ fn main() {
         );
         println!("\tIf you want to enjoy the greatest and latest features, make sure to update\n\tyour installation of saml2aws-auto.");
         println!("");
-    };
+    }
 
     if let Some(_) = matches.subcommand_matches("version") {
         App::from_yaml(yaml)

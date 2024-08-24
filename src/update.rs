@@ -7,9 +7,7 @@ extern crate semver;
 
 #[derive(Deserialize)]
 pub struct VersionInfo {
-    pub html_url: String,
     pub tag_name: String,
-    pub body: Option<String>,
 }
 
 pub enum VersionComparison {
