@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use super::base64;
 use super::serde_xml_rs;
+use base64::prelude::*;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Response")]
@@ -63,7 +63,8 @@ pub struct Role {
 }
 
 pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::Error> {
-    let mut buf: String = String::from_utf8(base64::decode(&assertion_b64).unwrap()).unwrap();
+    let mut buf: String =
+        String::from_utf8(BASE64_STANDARD.decode(&assertion_b64).unwrap()).unwrap();
 
     // https://github.com/RReverser/serde-xml-rs/issues/64
     // remove all namespaces (this is ugly)
@@ -101,10 +102,10 @@ pub fn parse_assertion(assertion_b64: &str) -> Result<Assertion, serde_xml_rs::E
                     let (account_id, role_name) = arn_to_role_info(&arn);
 
                     assertion.roles.push(Role {
-                        arn: arn,
-                        principal_arn: principal_arn,
-                        account_id: account_id,
-                        role_name: role_name,
+                        arn,
+                        principal_arn,
+                        account_id,
+                        role_name,
                     });
                 }
             }
@@ -144,4 +145,3 @@ mod tests {
         assert_eq!(role_name, "ARoleName");
     }
 }
-

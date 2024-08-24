@@ -18,7 +18,7 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 scraper = "0.20"
 cookie = "0.12"
-base64 = "0.11"
+base64 = "0.22"
 rust-ini = "0.12"
 dirs = "2.0"
 openssl-probe = "0.1.2"
