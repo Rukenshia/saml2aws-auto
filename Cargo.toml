@@ -24,7 +24,7 @@ dirs = "2.0"
 openssl-probe = "0.1.2"
 rpassword = "4.0"
 log = "0.4"
-fern = "0.5"
+fern = "0.6"
 url = "2.1"
 semver = "0.10"
 tabled = { version = "0.16", features = ["ansi"] }
