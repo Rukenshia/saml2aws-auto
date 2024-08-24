@@ -15,7 +15,7 @@ serde_yaml = "0.8"
 serde-xml-rs = "0.3"
 crossterm = "0.20"
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
 scraper = "0.20"
 cookie = "0.12"
 base64 = "0.22"
