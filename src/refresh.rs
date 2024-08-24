@@ -7,6 +7,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use std::thread;
+use tabled::settings::object::Columns;
+use tabled::settings::{Alignment, Modify, Style};
+use tabled::{Table, Tabled};
 
 use aws::assume_role::assume_role;
 use aws::credentials::load_credentials_file;
@@ -17,10 +20,6 @@ use crossterm::style::Stylize;
 use keycloak::login::get_assertion_response;
 use keycloak::KeycloakErrorKind;
 use saml::parse_assertion;
-use tabled::{
-    object::{Columns, Object},
-    Alignment, Modify, Style, Table, Tabled,
-};
 
 use config;
 
@@ -225,10 +224,7 @@ pub fn command(cfg: &mut config::Config, matches: &ArgMatches) {
                 "\n\n{}",
                 Table::new(outputs)
                     .with(Style::modern())
-                    .with(
-                        Modify::new(Columns::single(0).and(Columns::single(2)))
-                            .with(Alignment::left())
-                    )
+                    .with(Modify::new(Columns::single(1)).with(Alignment::center()))
                     .to_string()
             );
             credentials_file.write_to_file(filepath).unwrap();
