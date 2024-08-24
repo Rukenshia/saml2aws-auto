@@ -15,7 +15,6 @@ extern crate base64;
 extern crate cookie;
 extern crate dirs;
 extern crate ini;
-extern crate itertools;
 extern crate keyring;
 extern crate openssl_probe;
 extern crate reqwest;
