@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use super::dirs;
 use super::ini;
 
-pub fn load_credentials_file() -> Result<(ini::Ini, PathBuf), ini::ini::Error> {
+pub fn load_credentials_file() -> Result<(ini::Ini, PathBuf), ini::Error> {
     let filename = dirs::home_dir().unwrap().join(".aws");
 
     if !filename.exists() {
