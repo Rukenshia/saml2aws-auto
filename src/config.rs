@@ -9,7 +9,7 @@ use chrono::prelude::*;
 
 use crossterm::style::Stylize;
 use dirs;
-use keyring::{Keyring, KeyringError};
+use keyring::Entry;
 use rpassword;
 use serde_yaml;
 
@@ -81,12 +81,12 @@ pub fn load_or_default(path: &str) -> Result<Config, io::Error> {
     }
 }
 
-pub fn get_password(username: &str) -> Result<String, KeyringError> {
-    Keyring::new("saml2aws-auto", username).get_password()
+pub fn get_password(username: &str) -> Result<String, keyring::Error> {
+    Entry::new("saml2aws-auto", username)?.get_password()
 }
 
-pub fn set_password(username: &str, password: &str) -> Result<(), KeyringError> {
-    Keyring::new("saml2aws-auto", username).set_password(password)
+pub fn set_password(username: &str, password: &str) -> Result<(), keyring::Error> {
+    Entry::new("saml2aws-auto", username)?.set_password(password)
 }
 
 pub fn ask_question(question: &str, default: Option<&str>) {
