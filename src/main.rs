@@ -88,7 +88,7 @@ fn main() {
 
     match cli.command {
         cli::Commands::Configure => {
-            config::interactive_create(config::Config::default(&config_path));
+            config::interactive_create(config::load_or_default(&config_path).unwrap());
         }
         cli::Commands::Groups { command } => groups::command(
             &mut config::load_or_default(&config_path).unwrap(),
