@@ -98,6 +98,35 @@ You can use `saml2aws-auto configure` to reconfigure your details.
 If you have several IDPs that you need to connect to, you can use the `--config` option to provide
 a path to a separate config file for saml2aws-auto.
 
+## Building
+
+This tool is using rust as a wrapper and it first needs to be installed incl. cargo. 
+
+### Linux (Ubuntu)
+
+To build and install it in Ubuntu, you can execute the following:
+
+```
+sudo apt update
+sudo apt install -y curl build-essential pkg-config libssl-dev libdbus-1-dev
+
+# Install Rust via rustup
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+
+git clone https://github.com/Rukenshia/saml2aws-auto.git
+cd saml2aws-auto
+
+cargo build --release
+
+mkdir -p ~/bin
+mv ./target/release/saml2aws-auto ~/bin
+chmod +x ~/bin/saml2aws-auto
+
+# Add the directory to your PATH
+echo 'export PATH=$PATH:~/bin' >> ~/.zshrc
+```
+
 ## Usage
 
 You can interactively explore the tool by typing `saml2aws-auto help`. This also works for any of the sub commands.
@@ -127,3 +156,7 @@ saml2aws-auto --skip-password-manager groups add example --role Administrator --
 ## `The name org.freedesktop.secrets was not provided by any .service files (org.freedesktop.DBus.Error.ServiceUnknown)))`
 
 This is an error specific to linux and tells you that you currently don't have any secret manager implementing the Freedesktop Secret Service set up. Usually, a keyring app such as GNOME-Keyring or another tool is pre-installed. Open that up and configure both your master password and the default vault for your secrets and try rerunning saml2aws-auto. [Another link to what apps provide this API](https://specifications.freedesktop.org/secret-service/)
+
+## `saml2aws-auto: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory`
+
+This is an error specific to linux. The SSL library in ubuntu 22.04 and greater deprecated the ssl library 1.1. If a release is not available for ssl 1.3, then you need to rebuild the tool in your ubuntu environment. 
