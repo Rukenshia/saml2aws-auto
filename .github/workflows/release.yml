@@ -27,7 +27,7 @@ jobs:
           - os: 'macos-13'
             target: 'x86_64-apple-darwin'
             cross: false
-          - os: 'windows-2019'
+          - os: 'windows-2025'
             target: 'x86_64-pc-windows-gnu'
             cross: false
 
@@ -63,7 +63,7 @@ jobs:
           use-cross: ${{ matrix.targets.cross }}
 
       - name: Bundle release (Windows)
-        if: matrix.targets.os == 'windows-2019'
+        if: matrix.targets.os == 'windows-2025'
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto.exe saml2aws-auto.exe
@@ -71,7 +71,7 @@ jobs:
           echo "ASSET=saml2aws-auto-${{ matrix.targets.target }}.zip" >> $GITHUB_ENV
 
       - name: Bundle release (Linux and macOS)
-        if: matrix.targets.os != 'windows-2019'
+        if: matrix.targets.os != 'windows-2025'
         shell: bash
         run: |
           cp target/${{ matrix.targets.target }}/release/saml2aws-auto ./saml2aws-auto
