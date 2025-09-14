@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         targets:
-          - os: 'ubuntu-20.04'
+          - os: 'ubuntu-24.04'
             target: 'x86_64-unknown-linux-gnu'
             cross: false
           - os: 'macos-13'
@@ -49,7 +49,7 @@ jobs:
           target: ${{ matrix.targets.target }}
 
       - name: Install linux packages
-        if: matrix.targets.os == 'ubuntu-20.04'
+        if: matrix.targets.os == 'ubuntu-24.04'
         shell: bash
         run: |
           sudo apt-get update && sudo apt-get install -y libdbus-1-dev
